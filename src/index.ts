@@ -20,8 +20,8 @@ interface ReadableGlobalStateDelta {
 
 const doc = `
 Usage:
-  algo create 
-  algo call
+  algo app create 
+  algo app call
   algo compile 
   algo -h | --help | --version
 `
@@ -257,17 +257,18 @@ function compile () {
   })
 }
 
-if (docRes.create) {
-  const algoCli = new AlgoCLI()
-  console.log(config.compileCmd)
-  if (config.compileCmd && config.alwaysCompile) {
-    compile()
+if (docRes.app) {
+  if (docRes.create) {
+    const algoCli = new AlgoCLI()
+    if (config.compileCmd && config.alwaysCompile) {
+      compile()
+    }
+  
+    algoCli.create()
+  } else if (docRes.call) {
+    const algoCli = new AlgoCLI()
+    algoCli.call()
   }
-
-  algoCli.create()
-} else if (docRes.call) {
-  const algoCli = new AlgoCLI()
-  algoCli.call()
 } else if (docRes.compile) {
   compile()
 }
