@@ -1,0 +1,33 @@
+{
+    "compileCmd": "python3 contract.py",
+    "alwaysCompile": true,
+    "algod": {
+        "server": "http://localhost",
+        "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "port": 4001
+    },
+    "kmd": {
+        "server": "http://localhost",
+        "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "port": 4002,
+        "wallet": "unencrypted-default-wallet",
+        "password": ""
+    },
+    "app": {
+        "schema": {
+            "global": {
+                "ints": 0,
+                "bytes": 1
+            },
+            "local": {
+                "ints": 0,
+                "bytes": 0
+            }
+        },
+        "programs": {
+            "approval": "./approval.teal",
+            "clear": "./clear.teal"
+        },
+        "id": 9326
+    }
+}
