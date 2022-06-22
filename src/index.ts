@@ -26,7 +26,8 @@ Usage:
   algo -h | --help | --version
 `
 
-const config = JSON.parse(fs.readFileSync('./.algo.json', 'utf-8'))
+const config = require(`${process.cwd()}/.algo.config.js`)
+const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
 const docRes = docopt(doc)
 
 class AlgoCLI {
@@ -45,15 +46,30 @@ class AlgoCLI {
   async call () {
     const caller = (await this.getAccounts())[0]
 
-    const txn = await this.getCallTxn(config.app.id, caller)
+    const txn = await this.getCallTxn(data.appID, caller)
     const dr = await this.createDryRunFromTxns([txn], 'app_call')
     const drr = new algosdk.DryrunResult(await this.algodClient.dryrun(dr).do())
 
     this.logDrTxn(drr)
     await this.sendTxn(txn)
-    console.log(`AppID: ${config.app.id}`)
-    console.log(`App Balance: ${(await this.algodClient.accountInformation(algosdk.getApplicationAddress(config.app.id)).do()).amount}`)
+    console.log(`AppID: ${data.appID}`)
+    console.log(`App Balance: ${(await this.algodClient.accountInformation(algosdk.getApplicationAddress(data.appID)).do()).amount}`)
     console.log(`Caller: ${caller.addr}`)
+  }
+
+  updateData (updatedData: any) {
+    const file = './.algo.data.json'
+    let config = {} as any
+    if (fs.existsSync(file)) {
+      config = JSON.parse(fs.readFileSync(file, 'utf-8'))
+    }
+
+    const newConfig = {
+      ...config,
+      ...updatedData
+    }
+
+    fs.writeFileSync(file, JSON.stringify(newConfig, null, 4))
   }
 
   async create () {
@@ -70,8 +86,7 @@ class AlgoCLI {
     console.log(`App Balance: ${(await this.algodClient.accountInformation(algosdk.getApplicationAddress(appID)).do()).amount}`)
     console.log(`Creator: ${creator.addr}`)
 
-    config.app.id = appID
-    fs.writeFileSync('./.algo.json', JSON.stringify(config, null, 4))
+    this.updateData({ appID })
   }
 
   logDrTxn (drr: algosdk.DryrunResult, gtxn: number = 0) {
@@ -95,13 +110,12 @@ class AlgoCLI {
   getReadableBytes (bytes: string) {
     // first see if it's a valid address
     const b = new Uint8Array(Buffer.from(bytes as string, 'base64'))
-    let value = algosdk.encodeAddress(b)
+    const value = algosdk.encodeAddress(b)
 
     // then decode as string
     if (algosdk.isValidAddress(value)) {
       return value
-    }
-    else {
+    } else {
       return Buffer.from(bytes as string, 'base64').toString()
     }
   }
@@ -264,7 +278,7 @@ if (docRes.app) {
       console.log(`Compiling contract with '${config.compileCmd}'`)
       compile()
     }
-  
+
     algoCli.create()
   } else if (docRes.call) {
     const algoCli = new AlgoCLI()
