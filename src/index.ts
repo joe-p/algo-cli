@@ -98,11 +98,12 @@ class AlgoCLI {
     let value = algosdk.encodeAddress(b)
 
     // then decode as string
-    if (!algosdk.isValidAddress(value)) {
-      value = Buffer.from(bytes as string, 'base64').toString()
+    if (algosdk.isValidAddress(value)) {
+      return value
     }
-
-    return value
+    else {
+      return Buffer.from(bytes as string, 'base64').toString()
+    }
   }
 
   getReadableGlobalState (delta: Array<GlobalStateDelta>) {
