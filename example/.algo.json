@@ -1,6 +1,6 @@
 {
     "compileCmd": "python3 contract.py",
-    "alwaysCompile": true,
+    "compileOnCreate": true,
     "algod": {
         "server": "http://localhost",
         "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

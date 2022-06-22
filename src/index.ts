@@ -260,7 +260,8 @@ function compile () {
 if (docRes.app) {
   if (docRes.create) {
     const algoCli = new AlgoCLI()
-    if (config.compileCmd && config.alwaysCompile) {
+    if (config.compileCmd && config.compileOnCreate) {
+      console.log(`Compiling contract with '${config.compileCmd}'`)
       compile()
     }
   
