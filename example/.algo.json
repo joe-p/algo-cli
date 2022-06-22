@@ -17,7 +17,7 @@
         "schema": {
             "global": {
                 "ints": 0,
-                "bytes": 1
+                "bytes": 2
             },
             "local": {
                 "ints": 0,
@@ -28,6 +28,6 @@
             "approval": "./approval.teal",
             "clear": "./clear.teal"
         },
-        "id": 9326
+        "id": 9332
     }
 }

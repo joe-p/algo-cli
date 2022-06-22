@@ -6,6 +6,7 @@ import os
 def approval():
     return Seq(
         App.globalPut(Bytes('caller'), Txn.sender()),
+        App.globalPut(Bytes('hello'), Bytes('world!')),
         Approve()
     )
 
