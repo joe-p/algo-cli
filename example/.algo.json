@@ -27,7 +27,6 @@
         "programs": {
             "approval": "./approval.teal",
             "clear": "./clear.teal"
-        },
-        "id": 9332
+        }
     }
 }
