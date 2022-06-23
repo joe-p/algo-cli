@@ -51,8 +51,9 @@ module.exports = {
       {
         type: 'ApplicationCall',
         onCompletion: 'NoOp',
-        from: 0,
+        from: 1,
         appID: 'exampleApp', // get exampleApp ID from .algo.data.json
+        name: 'exampleAppCall'
         // appArgs: [],
         // accounts: [],
         // apps: [],

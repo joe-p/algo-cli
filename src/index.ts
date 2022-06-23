@@ -41,55 +41,75 @@ class AlgoCLI {
     this.kmdPassword = config.kmd.password
   }
 
-  async parseApplicationCreateTxn (txn: any) {
-    const suggestedParams = await this.algodClient.getTransactionParams().do()
+  async transformConfigTxn (txn: any) {
     if (typeof (txn.from) === 'number') {
       txn.from = (await this.getAccounts())[txn.from]
     }
 
-    let onComplete = algosdk.OnApplicationComplete.NoOpOC
+    if (typeof (txn.appID) === 'string') {
+      const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
+      txn.appID = data[txn.appID]
+    }
 
-    switch (txn.onCompelte) {
+    switch (txn.onComplete) {
       case ('NoOp'):
-        onComplete = algosdk.OnApplicationComplete.NoOpOC
+        txn.onComplete = algosdk.OnApplicationComplete.NoOpOC
         break
       default:
         break
     }
 
+    if (txn.teal) txn.teal.approval = await this.compileProgram(fs.readFileSync(txn.teal.approval, 'utf-8'))
+    if (txn.teal) txn.teal.clear = await this.compileProgram(fs.readFileSync(txn.teal.clear, 'utf-8'))
+
+    txn.args = (txn.args || []).map((a: any) => {
+      if (typeof (a) === 'string') {
+        return Buffer.from(a)
+      } else if (typeof (a) === 'number') {
+        return algosdk.encodeUint64(a)
+      } else {
+        return a
+      }
+    })
+
+    txn.accounts = (txn.accounts || []).map(async (a: any) => {
+      if (typeof (a) === 'number') {
+        return (await this.getAccounts())[a].addr
+      }
+
+      return a
+    })
+
+    
+    txn.apps = (txn.apps || []).map((a: any) => {
+      if (typeof (a) === 'string') {
+        return data.apps[a]
+      }
+
+      return a
+    })
+    
+
+    return txn
+  }
+
+  async parseApplicationCreateTxn (txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+
+    const onComplete = algosdk.OnApplicationComplete.NoOpOC
     const unsignedTxn = algosdk.makeApplicationCreateTxn(
       txn.from.addr,
       suggestedParams,
       onComplete,
-      await this.compileProgram(fs.readFileSync(txn.teal.approval, 'utf-8')),
-      await this.compileProgram(fs.readFileSync(txn.teal.clear, 'utf-8')),
+      txn.teal.approval,
+      txn.teal.clear,
       txn.schema.local.ints,
       txn.schema.local.bytes,
       txn.schema.global.ints,
       txn.schema.global.bytes,
-      (txn.args || []).map((a: any) => {
-        if (typeof (a) === 'string') {
-          return Buffer.from(a)
-        } else if (typeof (a) === 'number') {
-          return algosdk.encodeUint64(a)
-        } else {
-          return a
-        }
-      }),
-      (txn.accounts || []).map(async (a: any) => {
-        if (typeof (a) === 'number') {
-          return (await this.getAccounts())[a].addr
-        }
-
-        return a
-      }),
-      (txn.apps || []).map((a: any) => {
-        if (typeof (a) === 'string') {
-          return data.apps[a]
-        }
-
-        return a
-      }),
+      txn.args,
+      txn.accounts,
+      txn.apps,
       txn.assets,
       txn.note,
       txn.lease,
@@ -100,15 +120,39 @@ class AlgoCLI {
     return unsignedTxn
   }
 
+  async parseApplicationNoOpTxn (txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+
+    const unsignedTxn = algosdk.makeApplicationNoOpTxn(
+      txn.from.addr,
+      suggestedParams,
+      txn.appID,
+      txn.args, 
+      txn.accounts, 
+      txn.apps, 
+      txn.assets,
+      txn.note, 
+      txn.lease, 
+      txn.rekeyTo
+    )
+
+    return unsignedTxn
+  }
+
   async parseTxns (txns: any) {
     const txnObjs = {} as any
 
-    for (const txn of txns) {
+    for (let txn of txns) {
+      txn = await this.transformConfigTxn(txn)
+
       switch (txn.type) {
         case ('ApplicationCreate'):
           console.log(`Running '${txn.teal.compileCmd}' to compile TEAL for ${txn.name}`)
           compile(txn.teal.compileCmd)
           txnObjs[txn.name] = await this.parseApplicationCreateTxn(txn)
+          break
+        case ('ApplicationCall'):
+          txnObjs[txn.name] = await this.parseApplicationNoOpTxn(txn)
           break
         default:
           break
@@ -136,15 +180,18 @@ class AlgoCLI {
     const results = await this.sendTxns(signedTxns)
 
     for (const [index, name] of Object.keys(txns).entries()) {
-      const appID = results[index]['application-index']
+      const txn = results[index]
 
-      if (appID) {
-        console.log(`${name} ID: ${results[index]['application-index']}`)
+      if (txn['application-index']) {
+        const appID = txn['application-index']
+        console.log(`${name} ID: ${appID}`)
         const updatedID = {} as any
         updatedID[name] = appID
         this.updateData(updatedID)
+      } else if(results[index]?.txn?.txn?.apid) {
+        const appID = results[index].txn.txn.apid
+        console.log(`App ID: ${appID}`)
       }
-
     }
   }
 
@@ -296,7 +343,7 @@ class AlgoCLI {
   async createDryRunFromTxns (txns: Array<Uint8Array>, timestamp?: number) {
     const dTxns = txns.map(t => algosdk.decodeSignedTransaction(t))
     const dr = await algosdk.createDryrun({ client: this.algodClient, txns: dTxns, latestTimestamp: timestamp || 1 })
-    //fs.writeFileSync('./.dryruns/' + desc + '.dr', algosdk.encodeObj(dr.get_obj_for_encoding(true)))
+    // fs.writeFileSync('./.dryruns/' + desc + '.dr', algosdk.encodeObj(dr.get_obj_for_encoding(true)))
     return dr
   }
 
