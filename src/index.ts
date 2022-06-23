@@ -20,9 +20,7 @@ interface ReadableGlobalStateDelta {
 
 const doc = `
 Usage:
-  algo app create 
-  algo app call
-  algo compile 
+  algo send <name>
   algo -h | --help | --version
 `
 
@@ -43,18 +41,111 @@ class AlgoCLI {
     this.kmdPassword = config.kmd.password
   }
 
-  async call () {
-    const caller = (await this.getAccounts())[0]
+  async parseApplicationCreateTxn (txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+    if (typeof (txn.from) === 'number') {
+      txn.from = (await this.getAccounts())[txn.from]
+    }
 
-    const txn = await this.getCallTxn(data.appID, caller)
-    const dr = await this.createDryRunFromTxns([txn], 'app_call')
+    let onComplete = algosdk.OnApplicationComplete.NoOpOC
+
+    switch (txn.onCompelte) {
+      case ('NoOp'):
+        onComplete = algosdk.OnApplicationComplete.NoOpOC
+        break
+      default:
+        break
+    }
+
+    const unsignedTxn = algosdk.makeApplicationCreateTxn(
+      txn.from.addr,
+      suggestedParams,
+      onComplete,
+      await this.compileProgram(fs.readFileSync(txn.teal.approval, 'utf-8')),
+      await this.compileProgram(fs.readFileSync(txn.teal.clear, 'utf-8')),
+      txn.schema.local.ints,
+      txn.schema.local.bytes,
+      txn.schema.global.ints,
+      txn.schema.global.bytes,
+      (txn.args || []).map((a: any) => {
+        if (typeof (a) === 'string') {
+          return Buffer.from(a)
+        } else if (typeof (a) === 'number') {
+          return algosdk.encodeUint64(a)
+        } else {
+          return a
+        }
+      }),
+      (txn.accounts || []).map(async (a: any) => {
+        if (typeof (a) === 'number') {
+          return (await this.getAccounts())[a].addr
+        }
+
+        return a
+      }),
+      (txn.apps || []).map((a: any) => {
+        if (typeof (a) === 'string') {
+          return data.apps[a]
+        }
+
+        return a
+      }),
+      txn.assets,
+      txn.note,
+      txn.lease,
+      txn.rekeyTo,
+      txn.extraPages
+    )
+
+    return unsignedTxn
+  }
+
+  async parseTxns (txns: any) {
+    const txnObjs = {} as any
+
+    for (const txn of txns) {
+      switch (txn.type) {
+        case ('ApplicationCreate'):
+          console.log(`Running '${txn.teal.compileCmd}' to compile TEAL for ${txn.name}`)
+          compile(txn.teal.compileCmd)
+          txnObjs[txn.name] = await this.parseApplicationCreateTxn(txn)
+          break
+        default:
+          break
+      }
+    }
+
+    return txnObjs
+  }
+
+  async send (txns: any) {
+    const unsignedTxns = Object.values(txns) as Array<algosdk.Transaction>
+    const gTxn = algosdk.assignGroupID(unsignedTxns)
+
+    const signedTxnsPromises = gTxn.map(async t => t.signTxn(await this.getSK(algosdk.encodeAddress(t.from.publicKey))))
+    const signedTxns = await Promise.all(signedTxnsPromises)
+
+    const dr = await this.createDryRunFromTxns(signedTxns)
     const drr = new algosdk.DryrunResult(await this.algodClient.dryrun(dr).do())
 
-    this.logDrTxn(drr)
-    await this.sendTxn(txn)
-    console.log(`AppID: ${data.appID}`)
-    console.log(`App Balance: ${(await this.algodClient.accountInformation(algosdk.getApplicationAddress(data.appID)).do()).amount}`)
-    console.log(`Caller: ${caller.addr}`)
+    for (const [index, name] of Object.keys(txns).entries()) {
+      console.log(name + ':')
+      this.logDrTxn(drr, index)
+    }
+
+    const results = await this.sendTxns(signedTxns)
+
+    for (const [index, name] of Object.keys(txns).entries()) {
+      const appID = results[index]['application-index']
+
+      if (appID) {
+        console.log(`${name} ID: ${results[index]['application-index']}`)
+        const updatedID = {} as any
+        updatedID[name] = appID
+        this.updateData(updatedID)
+      }
+
+    }
   }
 
   updateData (updatedData: any) {
@@ -70,23 +161,6 @@ class AlgoCLI {
     }
 
     fs.writeFileSync(file, JSON.stringify(newConfig, null, 4))
-  }
-
-  async create () {
-    const creator = (await this.getAccounts())[0]
-
-    const txn = await this.createAppTxn(creator)
-    const dr = await this.createDryRunFromTxns([txn], 'app_create')
-    const drr = new algosdk.DryrunResult(await this.algodClient.dryrun(dr).do())
-
-    this.logDrTxn(drr)
-    const txnResult = await this.sendTxn(txn)
-    const appID = txnResult['application-index']
-    console.log(`AppID: ${appID}`)
-    console.log(`App Balance: ${(await this.algodClient.accountInformation(algosdk.getApplicationAddress(appID)).do()).amount}`)
-    console.log(`Creator: ${creator.addr}`)
-
-    this.updateData({ appID })
   }
 
   logDrTxn (drr: algosdk.DryrunResult, gtxn: number = 0) {
@@ -139,6 +213,11 @@ class AlgoCLI {
     })
 
     return r
+  }
+
+  async getSK (addr: string) {
+    const accounts = await this.getAccounts()
+    return accounts.find(a => a.addr === addr)?.sk as Uint8Array
   }
 
   // Based on https://github.com/algorand-devrel/demo-abi/blob/master/js/sandbox.ts
@@ -214,18 +293,21 @@ class AlgoCLI {
   }
 
   // create a dryrun object from an array of transactions
-  async createDryRunFromTxns (txns: Array<Uint8Array>, desc: string, timestamp?: number) {
+  async createDryRunFromTxns (txns: Array<Uint8Array>, timestamp?: number) {
     const dTxns = txns.map(t => algosdk.decodeSignedTransaction(t))
     const dr = await algosdk.createDryrun({ client: this.algodClient, txns: dTxns, latestTimestamp: timestamp || 1 })
-    fs.writeFileSync('./.dryruns/' + desc + '.dr', algosdk.encodeObj(dr.get_obj_for_encoding(true)))
+    //fs.writeFileSync('./.dryruns/' + desc + '.dr', algosdk.encodeObj(dr.get_obj_for_encoding(true)))
     return dr
   }
 
   // send txn to algod and wait for confirmation
   /* eslint-disable no-unused-vars */
-  async sendTxn (txn: Uint8Array | Array<Uint8Array>) {
-    const { txId } = await this.algodClient.sendRawTransaction(txn).do()
-    return await algosdk.waitForConfirmation(this.algodClient, txId, 3)
+  async sendTxns (txns: Array<Uint8Array>) {
+    const txIDs = txns.map(t => algosdk.decodeSignedTransaction(t).txn.txID())
+    await this.algodClient.sendRawTransaction(txns).do()
+
+    const results = await Promise.all(txIDs.map(id => algosdk.waitForConfirmation(this.algodClient, id, 3)))
+    return results
   }
 
   async createAppTxn (creator: algosdk.Account) {
@@ -257,8 +339,8 @@ class AlgoCLI {
   }
 }
 
-function compile () {
-  exec(config.compileCmd, (error, stdout, stderr) => {
+function compile (compileCmd: string) {
+  exec(compileCmd, (error, stdout, stderr) => {
     if (error) {
       console.error(error.message)
       return
@@ -271,19 +353,9 @@ function compile () {
   })
 }
 
-if (docRes.app) {
-  if (docRes.create) {
-    const algoCli = new AlgoCLI()
-    if (config.compileCmd && config.compileOnCreate) {
-      console.log(`Compiling contract with '${config.compileCmd}'`)
-      compile()
-    }
-
-    algoCli.create()
-  } else if (docRes.call) {
-    const algoCli = new AlgoCLI()
-    algoCli.call()
-  }
-} else if (docRes.compile) {
-  compile()
+if (docRes.send) {
+  const algoCli = new AlgoCLI()
+  algoCli.parseTxns(config.txns[docRes['<name>']]).then(async txns => {
+    await algoCli.send(txns)
+  })
 }
