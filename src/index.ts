@@ -80,7 +80,6 @@ class AlgoCLI {
       return a
     })
 
-    
     txn.apps = (txn.apps || []).map((a: any) => {
       if (typeof (a) === 'string') {
         return data.apps[a]
@@ -88,7 +87,6 @@ class AlgoCLI {
 
       return a
     })
-    
 
     return txn
   }
@@ -127,12 +125,12 @@ class AlgoCLI {
       txn.from.addr,
       suggestedParams,
       txn.appID,
-      txn.args, 
-      txn.accounts, 
-      txn.apps, 
+      txn.args,
+      txn.accounts,
+      txn.apps,
       txn.assets,
-      txn.note, 
-      txn.lease, 
+      txn.note,
+      txn.lease,
       txn.rekeyTo
     )
 
@@ -188,7 +186,7 @@ class AlgoCLI {
         const updatedID = {} as any
         updatedID[name] = appID
         this.updateData(updatedID)
-      } else if(results[index]?.txn?.txn?.apid) {
+      } else if (results[index]?.txn?.txn?.apid) {
         const appID = results[index].txn.txn.apid
         console.log(`App ID: ${appID}`)
       }
