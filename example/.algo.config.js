@@ -24,7 +24,7 @@ module.exports = {
         from: 0, // the 1st account in kmd
         schema: {
           global: {
-            ints: 0,
+            ints: 1,
             bytes: 2
           },
           local: {
@@ -61,7 +61,21 @@ module.exports = {
         // note: "",
         // lease: null,
         // rekeyTo: null
-      }
+      },
+      {
+        type: 'Payment',
+        from: 0,
+        amount: 100_000,
+        to: 'exampleApp',
+        name: 'examplePayment'
+        // appArgs: [],
+        // accounts: [],
+        // apps: [],
+        // assets: [],
+        // note: "",
+        // lease: null,
+        // rekeyTo: null
+      },
     ]
   }
 }

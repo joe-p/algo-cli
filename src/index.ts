@@ -25,7 +25,6 @@ Usage:
 `
 
 const config = require(`${process.cwd()}/.algo.config.js`)
-const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
 const docRes = docopt(doc)
 
 class AlgoCLI {
@@ -42,12 +41,23 @@ class AlgoCLI {
   }
 
   async transformConfigTxn (txn: any) {
+    const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
+
     if (typeof (txn.from) === 'number') {
       txn.from = (await this.getAccounts())[txn.from]
     }
 
+    if (typeof (txn.to) === 'number') {
+      txn.to = (await this.getAccounts())[txn.to]
+    } else if (typeof (txn.to) === 'string') {
+      txn.to = algosdk.getApplicationAddress(data[txn.to])
+    }
+
+    if (typeof (txn.note) === 'string') {
+      txn.note = new Uint8Array(Buffer.from(txn.note))
+    }
+
     if (typeof (txn.appID) === 'string') {
-      const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
       txn.appID = data[txn.appID]
     }
 
@@ -91,14 +101,31 @@ class AlgoCLI {
     return txn
   }
 
-  async parseApplicationCreateTxn (txn: any) {
+  async getPaymentTxn (txn: any) {
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
-    const onComplete = algosdk.OnApplicationComplete.NoOpOC
-    const unsignedTxn = algosdk.makeApplicationCreateTxn(
+    return algosdk.makePaymentTxn(
+      txn.from.addr,
+      txn.to,
+      suggestedParams.fee,
+      txn.amount,
+      txn.closeRemainderTo,
+      suggestedParams.firstRound,
+      suggestedParams.lastRound,
+      txn.note,
+      suggestedParams.genesisHash,
+      suggestedParams.genesisID,
+      txn.rekeyTo
+    )
+  }
+
+  async getApplicationCreateTxn (txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+
+    return algosdk.makeApplicationCreateTxn(
       txn.from.addr,
       suggestedParams,
-      onComplete,
+      txn.onComplete,
       txn.teal.approval,
       txn.teal.clear,
       txn.schema.local.ints,
@@ -114,14 +141,12 @@ class AlgoCLI {
       txn.rekeyTo,
       txn.extraPages
     )
-
-    return unsignedTxn
   }
 
-  async parseApplicationNoOpTxn (txn: any) {
+  async getApplicationNoOpTxn (txn: any) {
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
-    const unsignedTxn = algosdk.makeApplicationNoOpTxn(
+    return algosdk.makeApplicationNoOpTxn(
       txn.from.addr,
       suggestedParams,
       txn.appID,
@@ -133,11 +158,9 @@ class AlgoCLI {
       txn.lease,
       txn.rekeyTo
     )
-
-    return unsignedTxn
   }
 
-  async parseTxns (txns: any) {
+  async getTxns (txns: any) {
     const txnObjs = {} as any
 
     for (let txn of txns) {
@@ -145,12 +168,15 @@ class AlgoCLI {
 
       switch (txn.type) {
         case ('ApplicationCreate'):
-          console.log(`Running '${txn.teal.compileCmd}' to compile TEAL for ${txn.name}`)
+          this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
           compile(txn.teal.compileCmd)
-          txnObjs[txn.name] = await this.parseApplicationCreateTxn(txn)
+          txnObjs[txn.name] = await this.getApplicationCreateTxn(txn)
           break
         case ('ApplicationCall'):
-          txnObjs[txn.name] = await this.parseApplicationNoOpTxn(txn)
+          txnObjs[txn.name] = await this.getApplicationNoOpTxn(txn)
+          break
+        case ('Payment'):
+          txnObjs[txn.name] = await this.getPaymentTxn(txn)
           break
         default:
           break
@@ -171,8 +197,10 @@ class AlgoCLI {
     const drr = new algosdk.DryrunResult(await this.algodClient.dryrun(dr).do())
 
     for (const [index, name] of Object.keys(txns).entries()) {
-      console.log(name + ':')
-      this.logDrTxn(drr, index)
+      if (unsignedTxns[index].type === 'appl') {
+        this.writeOutput(`${name}:`, 0)
+        this.logAppDrTxn(drr, index)
+      }
     }
 
     const results = await this.sendTxns(signedTxns)
@@ -180,16 +208,16 @@ class AlgoCLI {
     for (const [index, name] of Object.keys(txns).entries()) {
       const txn = results[index]
 
+      console.log(name + ': ')
+
       if (txn['application-index']) {
         const appID = txn['application-index']
-        console.log(`${name} ID: ${appID}`)
         const updatedID = {} as any
         updatedID[name] = appID
         this.updateData(updatedID)
-      } else if (results[index]?.txn?.txn?.apid) {
-        const appID = results[index].txn.txn.apid
-        console.log(`App ID: ${appID}`)
       }
+
+      this.logTxn(txn, unsignedTxns[index].txID())
     }
   }
 
@@ -208,22 +236,35 @@ class AlgoCLI {
     fs.writeFileSync(file, JSON.stringify(newConfig, null, 4))
   }
 
-  logDrTxn (drr: algosdk.DryrunResult, gtxn: number = 0) {
+  logTxn (txn: any, txnID: string) {
+    const nestedTxn = txn.txn.txn
+    this.writeOutput(`TX ID: ${txnID}`)
+    this.writeOutput(`From: ${algosdk.encodeAddress(nestedTxn.snd)}`)
+    if (nestedTxn.rcv) this.writeOutput(`To: ${algosdk.encodeAddress(nestedTxn.rcv)}`)
+    if (nestedTxn.amt) this.writeOutput(`Amount: ${nestedTxn.amt.toLocaleString()}`)
+    if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`)
+    if (nestedTxn.apid || txn['application-index']) this.writeOutput(`App ID: ${nestedTxn.apid || txn['application-index']}`)
+  }
+
+  writeOutput (str: string, count: number = 2) {
+    console.log(str.replace(/^/gm, ' '.repeat(count)))
+  }
+
+  logAppDrTxn (drr: algosdk.DryrunResult, gtxn: number = 0) {
     const txn = drr.txns[gtxn]
-    console.log(`Opcode Cost: ${txn.cost}`)
-    console.log('Logs:')
+    this.writeOutput(`Opcode Cost: ${txn.cost}`)
+    this.writeOutput('Logs:')
     const logs = (txn.logs || []).map(b => {
       return this.getReadableBytes(b)
     })
-    console.log('- ' + logs.join('\n- '))
-    console.log('Global Delta:')
-    // @ts-ignore
-    console.log(this.getReadableGlobalState(txn.globalDelta))
-    console.log('Local Deltas:')
-    console.log(txn.localDeltas || [])
-    console.log(`Messages:\n- ${txn.appCallMessages?.join('\n- ')}`)
-    console.log('Trace:')
-    console.log(txn.appTrace({ maxValueWidth: process.stdout.columns / 3, topOfStackFirst: false }))
+    this.writeOutput('- ' + logs.join('\n    - '), 4)
+    this.writeOutput('Global Delta:')
+    this.writeOutput(JSON.stringify(this.getReadableGlobalState(txn.globalDelta as Array<GlobalStateDelta>), null, 2), 4)
+    this.writeOutput('Local Deltas:')
+    this.writeOutput(JSON.stringify(txn.localDeltas || [], null, 2), 4)
+    this.writeOutput(`Messages:\n    - ${txn.appCallMessages?.join('\n    - ')}`)
+    this.writeOutput('Trace:')
+    this.writeOutput(txn.appTrace({ maxValueWidth: process.stdout.columns / 3, topOfStackFirst: false }), 4)
   }
 
   getReadableBytes (bytes: string) {
@@ -400,7 +441,7 @@ function compile (compileCmd: string) {
 
 if (docRes.send) {
   const algoCli = new AlgoCLI()
-  algoCli.parseTxns(config.txns[docRes['<name>']]).then(async txns => {
+  algoCli.getTxns(config.txns[docRes['<name>']]).then(async txns => {
     await algoCli.send(txns)
   })
 }

@@ -4,10 +4,16 @@ import os
 
 
 def approval():
-    return Seq(
-        App.globalPut(Bytes('caller'), Txn.sender()),
-        App.globalPut(Bytes('hello'), Bytes('world!')),
-        Approve()
+    payment = Gtxn[1]
+    hello_world = Seq(App.globalPut(Bytes("Hello"), Bytes("World!")), Approve())
+    save_txn = Seq(
+        App.globalPut(Bytes("TX"), payment.tx_id()),
+        App.globalPut(Bytes("Amount"), payment.amount()),
+        Approve(),
+    )
+    return Cond(
+        [Txn.application_id() == Int(0), hello_world],
+        [payment.type_enum() == TxnType.Payment, save_txn],
     )
 
 
