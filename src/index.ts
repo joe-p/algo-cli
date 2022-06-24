@@ -21,6 +21,7 @@ interface ReadableGlobalStateDelta {
 const doc = `
 Usage:
   algo send <name>
+  algo accounts fund
   algo -h | --help | --version
 `
 
@@ -40,17 +41,74 @@ class AlgoCLI {
     this.kmdPassword = config.kmd.password
   }
 
-  async transformConfigTxn (txn: any) {
-    const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
+/* Commented out for now because we would need to handle assets/apps
+  async closeAllAccounts() {
+    const accounts = await this.getAllAccounts()
+    const closeTo = accounts[0]
+    const data = this.getData()
 
-    if (typeof (txn.from) === 'number') {
-      txn.from = (await this.getAccounts())[txn.from]
+    for(const name of Object.keys(config.accounts)) {    
+      const addr = data[name]
+
+      const account = accounts.find(a => a.addr === addr) as algosdk.Account
+      const actInfo = await this.algodClient.accountInformation(addr).do()
+      console.log(actInfo)
+
+      this.writeOutput(`Closing account ${addr} ('${name}') to ${closeTo.addr}`)
+      //await this.closeAccount(account, closeTo)
     }
 
-    if (typeof (txn.to) === 'number') {
-      txn.to = (await this.getAccounts())[txn.to]
-    } else if (typeof (txn.to) === 'string') {
-      txn.to = algosdk.getApplicationAddress(data[txn.to])
+  }
+*/
+
+
+  getData() {
+    return JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
+  }
+
+  async fundAllAccounts() {
+    const accounts = await this.getAllAccounts()
+    const funder = accounts[0]
+
+    for(const [name, accountConfig] of Object.entries(config.accounts)) {    
+      let account: algosdk.Account
+
+      const addr = this.getData()[name] as (string | undefined)
+
+      if(addr === undefined) {
+        account = await this.addAccount(name)
+      } else {
+        account = accounts.find(a => a.addr === addr) as algosdk.Account
+      }
+
+      const balance = (await this.algodClient.accountInformation(account.addr).do()).amount
+
+
+      const initialBalance = (accountConfig as any).initialBalance
+      const fundAmount = initialBalance - balance
+
+      await this.fundAccount(funder, account, fundAmount)
+
+      this.writeOutput(`Funded ${name} with an additional ${fundAmount.toLocaleString()} microALGO for a balance of ${initialBalance.toLocaleString()} microALGO`)
+    }    
+  }
+
+  async transformConfigTxn (txn: any) {
+    const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
+    const accounts = await this.getAllAccounts()
+
+    if (!algosdk.isValidAddress(txn.from)) {
+      const addr = data[txn.from]
+      txn.from = accounts.find(a => a.addr === addr )
+    }
+
+    if (txn.to && !algosdk.isValidAddress(txn.to)) {
+      const addr = data[txn.to]
+      const initialValue = txn.to
+
+      txn.to = accounts.find(a => a.addr === addr )
+
+      if (!algosdk.isValidAddress(txn.to)) txn.to = algosdk.getApplicationAddress(data[initialValue])
     }
 
     if (typeof (txn.note) === 'string') {
@@ -84,7 +142,7 @@ class AlgoCLI {
 
     txn.accounts = (txn.accounts || []).map(async (a: any) => {
       if (typeof (a) === 'number') {
-        return (await this.getAccounts())[a].addr
+        return (await this.getAllAccounts())[a].addr
       }
 
       return a
@@ -168,7 +226,7 @@ class AlgoCLI {
 
       switch (txn.type) {
         case ('ApplicationCreate'):
-          this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
+          this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`, 0)
           compile(txn.teal.compileCmd)
           txnObjs[txn.name] = await this.getApplicationCreateTxn(txn)
           break
@@ -301,13 +359,7 @@ class AlgoCLI {
     return r
   }
 
-  async getSK (addr: string) {
-    const accounts = await this.getAccounts()
-    return accounts.find(a => a.addr === addr)?.sk as Uint8Array
-  }
-
-  // Based on https://github.com/algorand-devrel/demo-abi/blob/master/js/sandbox.ts
-  async getAccounts (): Promise<algosdk.Account[]> {
+  async getHandle() {
     const wallets = await this.kmdClient.listWallets()
 
     // find kmdWallet
@@ -319,7 +371,34 @@ class AlgoCLI {
 
     // get handle
     const handleResp = await this.kmdClient.initWalletHandle(walletId, this.kmdPassword)
-    const handle = handleResp.wallet_handle_token
+    return handleResp.wallet_handle_token
+  }
+
+  async getSK (addr: string) {
+    const accounts = await this.getAllAccounts()
+    return accounts.find(a => a.addr === addr)?.sk as Uint8Array
+  }
+
+  async addAccount(name: string) {
+    const handle = await this.getHandle()
+
+    const newAccount = algosdk.generateAccount()
+    await this.kmdClient.importKey(handle, newAccount.sk)
+
+    this.kmdClient.releaseWalletHandle(handle)
+
+    const updatedData = {} as any
+    updatedData[name] = newAccount.addr
+    this.updateData(updatedData)
+
+    this.writeOutput(`Created account '${name}' - ${newAccount.addr}`)
+
+    return newAccount
+  }
+
+  // Based on https://github.com/algorand-devrel/demo-abi/blob/master/js/sandbox.ts
+  async getAllAccounts (): Promise<algosdk.Account[]> {
+    const handle = await this.getHandle()
 
     // get account keys
     const addresses = await this.kmdClient.listKeys(handle)
@@ -364,16 +443,18 @@ class AlgoCLI {
   }
 
   // close the remaining balance of an account to another account
-  async closeAccount (accountToClose: algosdk.Account, closeTo: algosdk.Account) {
+  async closeAccount (accountToClose: algosdk.Account, closeToAccount: algosdk.Account) {
     const txnObj = {
       suggestedParams: await this.algodClient.getTransactionParams().do(),
       from: accountToClose.addr,
-      to: accountToClose.addr,
+      to: closeToAccount.addr,
       amount: 0,
-      closeTo
+      closeRemainderTo: closeToAccount.addr
     }
 
     const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject(txnObj).signTxn(accountToClose.sk)
+
+    console.log(algosdk.decodeSignedTransaction(txn).txn)
     const { txId } = await this.algodClient.sendRawTransaction(txn).do()
     await algosdk.waitForConfirmation(this.algodClient, txId, 3)
   }
@@ -444,4 +525,11 @@ if (docRes.send) {
   algoCli.getTxns(config.txns[docRes['<name>']]).then(async txns => {
     await algoCli.send(txns)
   })
+} else if(docRes.accounts) {
+  const algoCli = new AlgoCLI()
+
+  if(docRes.fund) {
+    algoCli.fundAllAccounts()
+  }
+
 }

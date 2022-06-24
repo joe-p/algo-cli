@@ -15,13 +15,21 @@ module.exports = {
     wallet: "unencrypted-default-wallet",
     password: ""
   },
+  accounts: {
+    alice: {
+      initialBalance: 10_000_000
+    },
+    bob: {
+      initialBalance: 10_000_000
+    }
+  },
   txns: {
     create: [
       {
         type: 'ApplicationCreate',
         name: 'exampleApp', // this field is only used by algo-cli for saving appIDs
         onComplete: 'NoOp',
-        from: 0, // the 1st account in kmd
+        from: 'alice', // the 1st account in kmd
         schema: {
           global: {
             ints: 1,
@@ -51,7 +59,7 @@ module.exports = {
       {
         type: 'ApplicationCall',
         onCompletion: 'NoOp',
-        from: 1,
+        from: 'bob',
         appID: 'exampleApp', // get exampleApp ID from .algo.data.json
         name: 'exampleAppCall'
         // appArgs: [],
@@ -64,7 +72,7 @@ module.exports = {
       },
       {
         type: 'Payment',
-        from: 0,
+        from: 'bob',
         amount: 100_000,
         to: 'exampleApp',
         name: 'examplePayment'
