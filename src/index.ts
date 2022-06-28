@@ -21,7 +21,7 @@ interface ReadableGlobalStateDelta {
 const doc = `
 Usage:
   algo send <name>
-  algo accounts [fund | close]
+  algo accounts [fund | close | info]
   algo init
   algo -h | --help | --version
 `
@@ -63,6 +63,26 @@ class AlgoCLI {
 
   getData() {
     return JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
+  }
+
+  async accountsInfo() {
+    const accounts = await this.getAllAccounts()
+    const data = this.getData()
+
+    for(const name of Object.keys(this.config.accounts)) {    
+      const addr = data[name]
+
+      const account = accounts.find(a => a.addr === addr) as algosdk.Account
+
+      const info = await this.algodClient.accountInformation(account.addr).do()
+
+      this.writeOutput(`${name}:`, 0)
+      this.writeOutput(`Address: ${info.address}`)
+      this.writeOutput(`Balance: ${info.amount.toLocaleString()}`)
+      this.writeOutput(`Minimum Balance Required: ${info['min-balance'].toLocaleString()}`)
+
+    }
+
   }
 
   async fundAllAccounts() {
@@ -541,6 +561,8 @@ if (docRes.send) {
     algoCli.fundAllAccounts()
   } else if(docRes.close) {
     algoCli.closeAllAccounts()
+  } else if(docRes.info) {
+    algoCli.accountsInfo()
   }
 } else if(docRes.init) {
   const staticFiles = ['.algo.config.js', 'contract.py', 'approval.teal', 'clear.teal']
