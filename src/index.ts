@@ -21,7 +21,7 @@ interface ReadableGlobalStateDelta {
 const doc = `
 Usage:
   algo send <name>
-  algo accounts fund
+  algo accounts [fund | close]
   algo init
   algo -h | --help | --version
 `
@@ -43,25 +43,22 @@ class AlgoCLI {
     this.kmdPassword = this.config.kmd.password
   }
 
-/* Commented out for now because we would need to handle assets/apps
   async closeAllAccounts() {
     const accounts = await this.getAllAccounts()
     const closeTo = accounts[0]
     const data = this.getData()
 
-    for(const name of Object.keys(config.accounts)) {    
+    for(const name of Object.keys(this.config.accounts)) {    
       const addr = data[name]
 
       const account = accounts.find(a => a.addr === addr) as algosdk.Account
-      const actInfo = await this.algodClient.accountInformation(addr).do()
-      console.log(actInfo)
 
       this.writeOutput(`Closing account ${addr} ('${name}') to ${closeTo.addr}`)
-      //await this.closeAccount(account, closeTo)
+      await this.closeAccount(account, closeTo)
     }
 
   }
-*/
+
 
 
   getData() {
@@ -449,17 +446,24 @@ class AlgoCLI {
 
   // close the remaining balance of an account to another account
   async closeAccount (accountToClose: algosdk.Account, closeToAccount: algosdk.Account) {
+
+    const info = await this.algodClient.accountInformation(accountToClose.addr).do()
+    const balance = info.amount
+    const mbr = info['min-balance']
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+    const amount = balance - mbr - (suggestedParams.fee | 1_000)
+
+    if (amount <= 0) return
+    
     const txnObj = {
-      suggestedParams: await this.algodClient.getTransactionParams().do(),
+      suggestedParams,
       from: accountToClose.addr,
       to: closeToAccount.addr,
-      amount: 0,
-      closeRemainderTo: closeToAccount.addr
+      amount: amount
     }
 
     const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject(txnObj).signTxn(accountToClose.sk)
 
-    console.log(algosdk.decodeSignedTransaction(txn).txn)
     const { txId } = await this.algodClient.sendRawTransaction(txn).do()
     await algosdk.waitForConfirmation(this.algodClient, txId, 3)
   }
@@ -535,6 +539,8 @@ if (docRes.send) {
 
   if(docRes.fund) {
     algoCli.fundAllAccounts()
+  } else if(docRes.close) {
+    algoCli.closeAllAccounts()
   }
 } else if(docRes.init) {
   const staticFiles = ['.algo.config.js', 'contract.py', 'approval.teal', 'clear.teal']
