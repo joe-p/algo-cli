@@ -578,8 +578,4 @@ if (docRes.send) {
   if (!fs.existsSync('./.algo.data.json')) {
     fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
   }
-
-  const algoCli = new AlgoCLI()
-
-  algoCli.fundAllAccounts()
 }
