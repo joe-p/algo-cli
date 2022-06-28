@@ -22,10 +22,10 @@ const doc = `
 Usage:
   algo send <name>
   algo accounts fund
+  algo init
   algo -h | --help | --version
 `
 
-const config = require(`${process.cwd()}/.algo.config.js`)
 const docRes = docopt(doc)
 
 class AlgoCLI {
@@ -33,12 +33,14 @@ class AlgoCLI {
   algodClient: algosdk.Algodv2
   kmdWallet: string
   kmdPassword: string
+  config: any
 
   constructor () {
-    this.algodClient = new algosdk.Algodv2(config.algod.token, config.algod.server, config.algod.port)
-    this.kmdClient = new algosdk.Kmd(config.kmd.token, config.kmd.server, config.kmd.port)
-    this.kmdWallet = config.kmd.wallet
-    this.kmdPassword = config.kmd.password
+    this.config = require(`${process.cwd()}/.algo.config.js`)
+    this.algodClient = new algosdk.Algodv2(this.config.algod.token, this.config.algod.server, this.config.algod.port)
+    this.kmdClient = new algosdk.Kmd(this.config.kmd.token, this.config.kmd.server, this.config.kmd.port)
+    this.kmdWallet = this.config.kmd.wallet
+    this.kmdPassword = this.config.kmd.password
   }
 
 /* Commented out for now because we would need to handle assets/apps
@@ -70,7 +72,7 @@ class AlgoCLI {
     const accounts = await this.getAllAccounts()
     const funder = accounts[0]
 
-    for(const [name, accountConfig] of Object.entries(config.accounts)) {    
+    for(const [name, accountConfig] of Object.entries(this.config.accounts)) {    
       let account: algosdk.Account
 
       const addr = this.getData()[name] as (string | undefined)
@@ -218,7 +220,8 @@ class AlgoCLI {
     )
   }
 
-  async getTxns (txns: any) {
+  async getTxns () {
+    const txns = this.config.txns[docRes['<name>']]
     const txnObjs = {} as any
 
     for (let txn of txns) {
@@ -226,8 +229,10 @@ class AlgoCLI {
 
       switch (txn.type) {
         case ('ApplicationCreate'):
-          this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`, 0)
-          compile(txn.teal.compileCmd)
+          if(txn.teal.compileCmd) {
+            this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`, 0)
+            compile(txn.teal.compileCmd)
+          }
           txnObjs[txn.name] = await this.getApplicationCreateTxn(txn)
           break
         case ('ApplicationCall'):
@@ -478,14 +483,14 @@ class AlgoCLI {
   }
 
   async createAppTxn (creator: algosdk.Account) {
-    const approval = await this.compileProgram(fs.readFileSync(config.app.programs.approval).toString())
-    const clear = await this.compileProgram(fs.readFileSync(config.app.programs.clear).toString())
+    const approval = await this.compileProgram(fs.readFileSync(this.config.app.programs.approval).toString())
+    const clear = await this.compileProgram(fs.readFileSync(this.config.app.programs.clear).toString())
 
     const appObj = {
       suggestedParams: await this.algodClient.getTransactionParams().do(),
       from: creator.addr,
-      numGlobalByteSlices: config.app.schema.global.bytes,
-      numGlobalInts: config.app.schema.global.ints,
+      numGlobalByteSlices: this.config.app.schema.global.bytes,
+      numGlobalInts: this.config.app.schema.global.ints,
       approvalProgram: approval,
       clearProgram: clear
     } as any
@@ -522,7 +527,7 @@ function compile (compileCmd: string) {
 
 if (docRes.send) {
   const algoCli = new AlgoCLI()
-  algoCli.getTxns(config.txns[docRes['<name>']]).then(async txns => {
+  algoCli.getTxns().then(async txns => {
     await algoCli.send(txns)
   })
 } else if(docRes.accounts) {
@@ -531,5 +536,22 @@ if (docRes.send) {
   if(docRes.fund) {
     algoCli.fundAllAccounts()
   }
+} else if(docRes.init) {
+  const staticFiles = ['.algo.config.js', 'contract.py', 'approval.teal', 'clear.teal']
 
+  staticFiles.forEach(f => {
+    if (!fs.existsSync(f)) {
+      const source = __dirname + '/../static/' + f
+      const dest = './' + f
+      fs.copyFileSync(source, dest)
+    }
+  })
+
+  if (!fs.existsSync('./.algo.data.json')) {
+    fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
+  }
+
+  const algoCli = new AlgoCLI()
+
+  algoCli.fundAllAccounts()
 }

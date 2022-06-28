@@ -3,3 +3,4 @@ node_modules/
 .dryruns/
 *.teal
 .algo.data.json
+!static/*.teal
