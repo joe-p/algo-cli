@@ -2,6 +2,7 @@ import { docopt } from 'docopt'
 import * as fs from 'fs'
 import algosdk from 'algosdk'
 import { exec } from 'child_process'
+import { exit } from 'process'
 
 interface GlobalStateDeltaValue {
   action: number,
@@ -500,10 +501,20 @@ class AlgoCLI {
   /* eslint-disable no-unused-vars */
   async sendTxns (txns: Array<Uint8Array>) {
     const txIDs = txns.map(t => algosdk.decodeSignedTransaction(t).txn.txID())
-    await this.algodClient.sendRawTransaction(txns).do()
+    try {
+      await this.algodClient.sendRawTransaction(txns).do()
 
-    const results = await Promise.all(txIDs.map(id => algosdk.waitForConfirmation(this.algodClient, id, 3)))
-    return results
+      const results = await Promise.all(txIDs.map(id => algosdk.waitForConfirmation(this.algodClient, id, 3)))
+      return results
+    } catch (e: any) {
+      if(e.response.body.message) {
+        console.error(e.response.body.message)
+      } else {
+        throw e
+      }
+
+      exit(1)
+    }
   }
 
   async createAppTxn (creator: algosdk.Account) {
