@@ -22,7 +22,7 @@ interface ReadableGlobalStateDelta {
 const doc = `
 Usage:
   algo send <name>
-  algo accounts [fund | close | info]
+  algo accounts (fund | close | info)
   algo init
   algo -h | --help | --version
 `
