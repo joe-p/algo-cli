@@ -317,14 +317,29 @@ class AlgoCLI {
     fs.writeFileSync(file, JSON.stringify(newConfig, null, 4))
   }
 
-  logTxn (txn: any, txnID: string) {
+  async logTxn (txn: any, txnID: string, offset: number = 0) {
     const nestedTxn = txn.txn.txn
-    this.writeOutput(`TX ID: ${txnID}`)
-    this.writeOutput(`From: ${algosdk.encodeAddress(nestedTxn.snd)}`)
-    if (nestedTxn.rcv) this.writeOutput(`To: ${algosdk.encodeAddress(nestedTxn.rcv)}`)
-    if (nestedTxn.amt) this.writeOutput(`Amount: ${nestedTxn.amt.toLocaleString()}`)
-    if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`)
-    if (nestedTxn.apid || txn['application-index']) this.writeOutput(`App ID: ${nestedTxn.apid || txn['application-index']}`)
+    this.writeOutput(`TX ID: ${txnID}`, 2 + offset)
+    this.writeOutput(`From: ${algosdk.encodeAddress(nestedTxn.snd)}`, 2 + offset)
+    if (nestedTxn.rcv) this.writeOutput(`To: ${algosdk.encodeAddress(nestedTxn.rcv)}`, 2 + offset)
+    if (nestedTxn.amt) this.writeOutput(`Amount: ${nestedTxn.amt.toLocaleString()}`, 2 + offset)
+    if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`, 2 + offset)
+    if (nestedTxn.apid || txn['application-index']) this.writeOutput(`App ID: ${nestedTxn.apid || txn['application-index']}`, 2 + offset)    
+    if (txn['asset-index']) { 
+      const assetIndex = txn['asset-index']
+      this.writeOutput(`Asset ID: ${assetIndex}`, 2 + offset)
+      console.log((await this.algodClient.getAssetByID(assetIndex).do()).params)
+    }
+
+    
+    const innerTxns = txn['inner-txns']
+
+    if (innerTxns) {
+      this.writeOutput('Inner Transactions:')
+      for (const innerTxn of innerTxns) {
+        this.logTxn(innerTxn, 'inner', 2)
+      }
+    }
   }
 
   writeOutput (str: string, count: number = 2) {
