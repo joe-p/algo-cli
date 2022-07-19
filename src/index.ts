@@ -152,7 +152,7 @@ class AlgoCLI {
 
     txn.args = (txn.args || []).map((a: any) => {
       if (typeof (a) === 'string') {
-        return Buffer.from(a)
+        return new Uint8Array(Buffer.from(a))
       } else if (typeof (a) === 'number') {
         return algosdk.encodeUint64(a)
       } else {
