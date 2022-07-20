@@ -270,22 +270,25 @@ class AlgoCLI {
     const signedTxnsPromises = gTxn.map(async t => t.signTxn(await this.getSK(algosdk.encodeAddress(t.from.publicKey))))
     const signedTxns = await Promise.all(signedTxnsPromises)
 
-    const dr = await this.createDryRunFromTxns(signedTxns)
-    const drr = new algosdk.DryrunResult(await this.algodClient.dryrun(dr).do())
-
-    for (const [index, name] of Object.keys(txns).entries()) {
-      if (unsignedTxns[index].type === 'appl') {
-        this.writeOutput(`${name}:`)
-        this.logAppDrTxn(drr, index)
+    if (Object.values(txns).length == 1) {
+      const dr = await this.createDryRunFromTxns(signedTxns)
+      const drr = new algosdk.DryrunResult(await this.algodClient.dryrun(dr).do())
+  
+      for (const [index, name] of Object.keys(txns).entries()) {
+        if (unsignedTxns[index].type === 'appl') {
+          this.writeOutput(`${name} Dryrun:`)
+          this.logAppDrTxn(drr, index)
+        }
       }
-    }
+    } else this.writeOutput('Skipping dryrun trace due to atomic transactions')
+
 
     const results = await this.sendTxns(signedTxns)
 
     for (const [index, name] of Object.keys(txns).entries()) {
       const txn = results[index]
 
-      this.writeOutput(name + ': ')
+      this.writeOutput(`${name} Transaction:`)
 
       if (txn['application-index']) {
         const appID = txn['application-index']
@@ -375,7 +378,7 @@ class AlgoCLI {
     this.writeOutput(`Opcode Cost: ${txn.cost}`, 2)
     this.writeOutput(`Messages:\n    - ${txn.appCallMessages?.join('\n    - ')}`, 2)    
     this.writeOutput('Trace:', 2)
-    //this.writeOutput(txn.appTrace({ maxValueWidth: process.stdout.columns / 3, topOfStackFirst: false }), 4)
+    this.writeOutput(txn.appTrace({ maxValueWidth: process.stdout.columns / 3, topOfStackFirst: false }), 4)
   }
 
   getReadableBytes (bytes: string) {
