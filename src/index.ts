@@ -160,17 +160,13 @@ class AlgoCLI {
       }
     })
 
-    txn.accounts = (txn.accounts || []).map(async (a: any) => {
-      if (typeof (a) === 'number') {
-        return (await this.getAllAccounts())[a].addr
-      }
-
-      return a
+    txn.accounts = (txn.accounts || []).map( (a: string)  => {
+      return data[a] || a
     })
 
     txn.apps = (txn.apps || []).map((a: any) => {
       if (typeof (a) === 'string') {
-        return data.apps[a]
+        return data[a]
       }
 
       return a
