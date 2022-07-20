@@ -41,7 +41,7 @@ module.exports = {
           }
         },
         teal: {
-          // compileCmd: "python3 contract.py", // run this command before creating app
+          compileCmd: "python3 contract.py", // run this command before creating app
           approval: "./approval.teal",
           clear: "./clear.teal"
         },
@@ -62,13 +62,6 @@ module.exports = {
         from: 'bob',
         appID: 'exampleApp',
         name: 'exampleAppCall'
-        // appArgs: [],
-        // accounts: [],
-        // apps: [],
-        // assets: [],
-        // note: "",
-        // lease: null,
-        // rekeyTo: null
       },
       {
         type: 'Payment',
@@ -76,13 +69,6 @@ module.exports = {
         amount: 100_000,
         to: 'exampleApp',
         name: 'examplePayment'
-        // appArgs: [],
-        // accounts: [],
-        // apps: [],
-        // assets: [],
-        // note: "",
-        // lease: null,
-        // rekeyTo: null
       },
     ]
   }
