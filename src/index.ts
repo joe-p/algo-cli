@@ -313,6 +313,22 @@ class AlgoCLI {
     fs.writeFileSync(file, JSON.stringify(newConfig, null, 4))
   }
 
+  async logASA(assetIndex: number, offset: number = 0) {
+    const asa = (await this.algodClient.getAssetByID(assetIndex).do()).params
+    this.writeOutput(`Asset ID: ${assetIndex}`, 2 + offset)
+    this.writeOutput(`Name: ${asa.name}`, 2 + offset)
+    this.writeOutput(`Unit Name: ${asa['unit-name']}`, 2 + offset)
+    this.writeOutput(`Total: ${asa.total.toLocaleString()}`, 2 + offset)
+    this.writeOutput(`Decimals: ${asa.decimals}`, 2 + offset)
+    this.writeOutput(`Clawback: ${asa.clawback}`, 2 + offset)
+    this.writeOutput(`Creator: ${asa.creator}`, 2 + offset)
+    this.writeOutput(`Manager: ${asa.manager}`, 2 + offset)
+    this.writeOutput(`Freeze: ${asa.freeze}`, 2 + offset)
+    this.writeOutput(`Reserve: ${asa.reserve}`, 2 + offset)
+    this.writeOutput(`Default Frozen: ${asa['default-frozen']}`, 2 + offset)
+    this.writeOutput(`URL: ${atob(asa['url-b64'])}`, 2 + offset)
+  }
+
   async logTxn (txn: any, txnID: string, offset: number = 0) {
     const nestedTxn = txn.txn.txn
     this.writeOutput(`TX ID: ${txnID}`, 2 + offset)
@@ -322,18 +338,17 @@ class AlgoCLI {
     if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`, 2 + offset)
     if (nestedTxn.apid || txn['application-index']) this.writeOutput(`App ID: ${nestedTxn.apid || txn['application-index']}`, 2 + offset)    
     if (txn['asset-index']) { 
-      const assetIndex = txn['asset-index']
-      this.writeOutput(`Asset ID: ${assetIndex}`, 2 + offset)
-      console.log((await this.algodClient.getAssetByID(assetIndex).do()).params)
+      await this.logASA(txn['asset-index'], offset)
     }
 
     
-    const innerTxns = txn['inner-txns']
+    const innerTxns = txn['inner-txns'] as Array<any>
 
     if (innerTxns) {
       this.writeOutput('Inner Transactions:')
       for (const innerTxn of innerTxns) {
-        this.logTxn(innerTxn, 'inner', 2)
+        this.writeOutput(`${innerTxns.indexOf(innerTxn)}:`, offset + 4)
+        this.logTxn(innerTxn, txnID, offset + 6)
       }
     }
   }
