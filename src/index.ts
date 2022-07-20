@@ -77,10 +77,10 @@ class AlgoCLI {
 
       const info = await this.algodClient.accountInformation(account.addr).do()
 
-      this.writeOutput(`${name}:`, 0)
-      this.writeOutput(`Address: ${info.address}`)
-      this.writeOutput(`Balance: ${info.amount.toLocaleString()}`)
-      this.writeOutput(`Minimum Balance Required: ${info['min-balance'].toLocaleString()}`)
+      this.writeOutput(`${name}:`)
+      this.writeOutput(`Address: ${info.address}`, 2)
+      this.writeOutput(`Balance: ${info.amount.toLocaleString()}`, 2)
+      this.writeOutput(`Minimum Balance Required: ${info['min-balance'].toLocaleString()}`, 2)
 
     }
 
@@ -109,7 +109,7 @@ class AlgoCLI {
 
       await this.fundAccount(funder, account, fundAmount)
 
-      this.writeOutput(`Funded ${name} with an additional ${fundAmount.toLocaleString()} microALGO for a balance of ${initialBalance.toLocaleString()} microALGO`)
+      this.writeOutput(`Funded ${name} with an additional ${fundAmount.toLocaleString()} microALGO for a balance of ${initialBalance.toLocaleString()} microALGO`, 2)
     }    
   }
 
@@ -244,7 +244,7 @@ class AlgoCLI {
       switch (txn.type) {
         case ('ApplicationCreate'):
           if(txn.teal.compileCmd) {
-            this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`, 0)
+            this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
             compile(txn.teal.compileCmd)
           }
           txnObjs[txn.name] = await this.getApplicationCreateTxn(txn)
@@ -275,7 +275,7 @@ class AlgoCLI {
 
     for (const [index, name] of Object.keys(txns).entries()) {
       if (unsignedTxns[index].type === 'appl') {
-        this.writeOutput(`${name}:`, 0)
+        this.writeOutput(`${name}:`)
         this.logAppDrTxn(drr, index)
       }
     }
@@ -285,7 +285,7 @@ class AlgoCLI {
     for (const [index, name] of Object.keys(txns).entries()) {
       const txn = results[index]
 
-      console.log(name + ': ')
+      this.writeOutput(name + ': ')
 
       if (txn['application-index']) {
         const appID = txn['application-index']
@@ -336,7 +336,20 @@ class AlgoCLI {
     if (nestedTxn.rcv) this.writeOutput(`To: ${algosdk.encodeAddress(nestedTxn.rcv)}`, 2 + offset)
     if (nestedTxn.amt) this.writeOutput(`Amount: ${nestedTxn.amt.toLocaleString()}`, 2 + offset)
     if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`, 2 + offset)
-    if (nestedTxn.apid || txn['application-index']) this.writeOutput(`App ID: ${nestedTxn.apid || txn['application-index']}`, 2 + offset)    
+    
+    if (txn['application-index']) {
+      this.writeOutput(`App ID: ${txn['application-index']}`, 2 + offset)
+      this.writeOutput('Logs:', 2 + offset)
+      const logs = (txn.logs || []).map((b: any) => {
+        return this.getReadableBytes(b)
+      })
+      this.writeOutput('- ' + logs.join('\n    - '), 4 + offset)
+      this.writeOutput('Global Delta:', 2 + offset)
+      this.writeOutput(JSON.stringify(this.getReadableGlobalState(txn['global-state-delta'] as Array<GlobalStateDelta>), null, 2), 4 + offset)
+      this.writeOutput('Local Deltas:', 2 + offset)
+      this.writeOutput(JSON.stringify(txn['local-state-delta'] || [], null, 2), 4 + offset)
+    }
+    
     if (txn['asset-index']) { 
       await this.logASA(txn['asset-index'], offset)
     }
@@ -345,7 +358,7 @@ class AlgoCLI {
     const innerTxns = txn['inner-txns'] as Array<any>
 
     if (innerTxns) {
-      this.writeOutput('Inner Transactions:')
+      this.writeOutput('Inner Transactions:', 2 + offset)
       for (const innerTxn of innerTxns) {
         this.writeOutput(`${innerTxns.indexOf(innerTxn)}:`, offset + 4)
         this.logTxn(innerTxn, txnID, offset + 6)
@@ -353,25 +366,16 @@ class AlgoCLI {
     }
   }
 
-  writeOutput (str: string, count: number = 2) {
+  writeOutput (str: string, count: number = 0) {
     console.log(str.replace(/^/gm, ' '.repeat(count)))
   }
 
   logAppDrTxn (drr: algosdk.DryrunResult, gtxn: number = 0) {
     const txn = drr.txns[gtxn]
-    this.writeOutput(`Opcode Cost: ${txn.cost}`)
-    this.writeOutput('Logs:')
-    const logs = (txn.logs || []).map(b => {
-      return this.getReadableBytes(b)
-    })
-    this.writeOutput('- ' + logs.join('\n    - '), 4)
-    this.writeOutput('Global Delta:')
-    this.writeOutput(JSON.stringify(this.getReadableGlobalState(txn.globalDelta as Array<GlobalStateDelta>), null, 2), 4)
-    this.writeOutput('Local Deltas:')
-    this.writeOutput(JSON.stringify(txn.localDeltas || [], null, 2), 4)
-    this.writeOutput(`Messages:\n    - ${txn.appCallMessages?.join('\n    - ')}`)
-    this.writeOutput('Trace:')
-    this.writeOutput(txn.appTrace({ maxValueWidth: process.stdout.columns / 3, topOfStackFirst: false }), 4)
+    this.writeOutput(`Opcode Cost: ${txn.cost}`, 2)
+    this.writeOutput(`Messages:\n    - ${txn.appCallMessages?.join('\n    - ')}`, 2)    
+    this.writeOutput('Trace:', 2)
+    //this.writeOutput(txn.appTrace({ maxValueWidth: process.stdout.columns / 3, topOfStackFirst: false }), 4)
   }
 
   getReadableBytes (bytes: string) {
