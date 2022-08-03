@@ -25,6 +25,7 @@ Usage:
   algo send <name>
   algo accounts (fund | close | info)
   algo init
+  algo reset
   algo -h | --help | --version
 `
 
@@ -53,9 +54,10 @@ class AlgoCLI {
     for (const name of Object.keys(this.config.accounts)) {
       const addr = data[name]
 
-      const account = accounts.find(a => a.addr === addr) as algosdk.Account
-
       this.writeOutput(`Closing account ${addr} ('${name}') to ${closeTo.addr}`)
+
+      const account = this.findAccount(accounts, addr, name)
+
       await this.closeAccount(account, closeTo)
     }
   }
@@ -71,7 +73,7 @@ class AlgoCLI {
     for (const name of Object.keys(this.config.accounts)) {
       const addr = data[name]
 
-      const account = accounts.find(a => a.addr === addr) as algosdk.Account
+      const account = this.findAccount(accounts, addr, name)
 
       const info = await this.algodClient.accountInformation(account.addr).do()
 
@@ -94,7 +96,7 @@ class AlgoCLI {
       if (addr === undefined) {
         account = await this.addAccount(name)
       } else {
-        account = accounts.find(a => a.addr === addr) as algosdk.Account
+        account = this.findAccount(accounts, addr, name)
       }
 
       const balance = (await this.algodClient.accountInformation(account.addr).do()).amount
@@ -108,13 +110,30 @@ class AlgoCLI {
     }
   }
 
+  findAccount(accounts: Array<algosdk.Account>, addr: string, name: string) {
+    const account = accounts.find(a => a.addr === addr)
+
+    if (account === undefined) {
+      let accountString = addr
+
+      if (name !== undefined) {
+        accountString = `${name} (${addr})`
+      }
+
+      console.error(`Account ${accountString} not found. Perhaps you are on the wrong network? Run 'algo reset' to reset the saved data and fund the new accounts`)
+      exit(1)
+    }
+
+    return account
+  }
+
   async transformConfigTxn (txn: any) {
     const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
     const accounts = await this.getAllAccounts()
 
     if (!algosdk.isValidAddress(txn.from)) {
       const addr = data[txn.from]
-      txn.from = accounts.find(a => a.addr === addr)
+      txn.from = this.findAccount(accounts, addr, txn.from)
     }
 
     if (txn.to && !algosdk.isValidAddress(txn.to)) {
@@ -614,4 +633,10 @@ if (docRes.send) {
   if (!fs.existsSync('./.algo.data.json')) {
     fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
   }
+} else if (docRes.reset) {
+  fs.unlinkSync('./.algo.data.json')
+  fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
+
+  const algoCli = new AlgoCLI()
+  algoCli.fundAllAccounts()
 }
