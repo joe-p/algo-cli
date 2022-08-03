@@ -110,7 +110,7 @@ class AlgoCLI {
     }
   }
 
-  findAccount(accounts: Array<algosdk.Account>, addr: string, name: string) {
+  findAccount (accounts: Array<algosdk.Account>, addr: string, name: string) {
     const account = accounts.find(a => a.addr === addr)
 
     if (account === undefined) {
@@ -634,7 +634,8 @@ if (docRes.send) {
     fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
   }
 } else if (docRes.reset) {
-  fs.unlinkSync('./.algo.data.json')
+  if (fs.existsSync('./.algo.data.json')) fs.unlinkSync('./.algo.data.json')
+
   fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
 
   const algoCli = new AlgoCLI()
