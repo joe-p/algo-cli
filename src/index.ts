@@ -3,6 +3,7 @@ import * as fs from 'fs'
 import algosdk from 'algosdk'
 import { exec } from 'child_process'
 import { exit } from 'process'
+import path from 'path'
 
 interface GlobalStateDeltaValue {
   action: number,
@@ -44,12 +45,12 @@ class AlgoCLI {
     this.kmdPassword = this.config.kmd.password
   }
 
-  async closeAllAccounts() {
+  async closeAllAccounts () {
     const accounts = await this.getAllAccounts()
     const closeTo = accounts[0]
     const data = this.getData()
 
-    for(const name of Object.keys(this.config.accounts)) {    
+    for (const name of Object.keys(this.config.accounts)) {
       const addr = data[name]
 
       const account = accounts.find(a => a.addr === addr) as algosdk.Account
@@ -57,20 +58,17 @@ class AlgoCLI {
       this.writeOutput(`Closing account ${addr} ('${name}') to ${closeTo.addr}`)
       await this.closeAccount(account, closeTo)
     }
-
   }
 
-
-
-  getData() {
+  getData () {
     return JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
   }
 
-  async accountsInfo() {
+  async accountsInfo () {
     const accounts = await this.getAllAccounts()
     const data = this.getData()
 
-    for(const name of Object.keys(this.config.accounts)) {    
+    for (const name of Object.keys(this.config.accounts)) {
       const addr = data[name]
 
       const account = accounts.find(a => a.addr === addr) as algosdk.Account
@@ -81,21 +79,19 @@ class AlgoCLI {
       this.writeOutput(`Address: ${info.address}`, 2)
       this.writeOutput(`Balance: ${info.amount.toLocaleString()}`, 2)
       this.writeOutput(`Minimum Balance Required: ${info['min-balance'].toLocaleString()}`, 2)
-
     }
-
   }
 
-  async fundAllAccounts() {
+  async fundAllAccounts () {
     const accounts = await this.getAllAccounts()
     const funder = accounts[0]
 
-    for(const [name, accountConfig] of Object.entries(this.config.accounts)) {    
+    for (const [name, accountConfig] of Object.entries(this.config.accounts)) {
       let account: algosdk.Account
 
       const addr = this.getData()[name] as (string | undefined)
 
-      if(addr === undefined) {
+      if (addr === undefined) {
         account = await this.addAccount(name)
       } else {
         account = accounts.find(a => a.addr === addr) as algosdk.Account
@@ -103,14 +99,13 @@ class AlgoCLI {
 
       const balance = (await this.algodClient.accountInformation(account.addr).do()).amount
 
-
       const initialBalance = (accountConfig as any).initialBalance
       const fundAmount = initialBalance - balance
 
       await this.fundAccount(funder, account, fundAmount)
 
       this.writeOutput(`Funded ${name} with an additional ${fundAmount.toLocaleString()} microALGO for a balance of ${initialBalance.toLocaleString()} microALGO`, 2)
-    }    
+    }
   }
 
   async transformConfigTxn (txn: any) {
@@ -119,14 +114,14 @@ class AlgoCLI {
 
     if (!algosdk.isValidAddress(txn.from)) {
       const addr = data[txn.from]
-      txn.from = accounts.find(a => a.addr === addr )
+      txn.from = accounts.find(a => a.addr === addr)
     }
 
     if (txn.to && !algosdk.isValidAddress(txn.to)) {
       const addr = data[txn.to]
       const initialValue = txn.to
 
-      txn.to = accounts.find(a => a.addr === addr )
+      txn.to = accounts.find(a => a.addr === addr)
 
       if (!algosdk.isValidAddress(txn.to)) txn.to = algosdk.getApplicationAddress(data[initialValue])
     }
@@ -160,7 +155,7 @@ class AlgoCLI {
       }
     })
 
-    txn.accounts = (txn.accounts || []).map( (a: string)  => {
+    txn.accounts = (txn.accounts || []).map((a: string) => {
       return data[a] || a
     })
 
@@ -243,7 +238,7 @@ class AlgoCLI {
 
       switch (txn.type) {
         case ('ApplicationCreate'):
-          if(txn.teal.compileCmd) {
+          if (txn.teal.compileCmd) {
             this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
             compile(txn.teal.compileCmd)
           }
@@ -270,10 +265,10 @@ class AlgoCLI {
     const signedTxnsPromises = gTxn.map(async t => t.signTxn(await this.getSK(algosdk.encodeAddress(t.from.publicKey))))
     const signedTxns = await Promise.all(signedTxnsPromises)
 
-    if (Object.values(txns).length == 1) {
+    if (Object.values(txns).length === 1) {
       const dr = await this.createDryRunFromTxns(signedTxns)
       const drr = new algosdk.DryrunResult(await this.algodClient.dryrun(dr).do())
-  
+
       for (const [index, name] of Object.keys(txns).entries()) {
         if (unsignedTxns[index].type === 'appl') {
           this.writeOutput(`${name} Dryrun:`)
@@ -281,7 +276,6 @@ class AlgoCLI {
         }
       }
     } else this.writeOutput('Skipping dryrun trace due to atomic transactions')
-
 
     const results = await this.sendTxns(signedTxns)
 
@@ -316,7 +310,7 @@ class AlgoCLI {
     fs.writeFileSync(file, JSON.stringify(newConfig, null, 4))
   }
 
-  async logASA(assetIndex: number, offset: number = 0) {
+  async logASA (assetIndex: number, offset: number = 0) {
     const asa = (await this.algodClient.getAssetByID(assetIndex).do()).params
     this.writeOutput(`Asset ID: ${assetIndex}`, 2 + offset)
     this.writeOutput(`Name: ${asa.name}`, 2 + offset)
@@ -339,7 +333,7 @@ class AlgoCLI {
     if (nestedTxn.rcv) this.writeOutput(`To: ${algosdk.encodeAddress(nestedTxn.rcv)}`, 2 + offset)
     if (nestedTxn.amt) this.writeOutput(`Amount: ${nestedTxn.amt.toLocaleString()}`, 2 + offset)
     if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`, 2 + offset)
-    
+
     if (txn['application-index']) {
       this.writeOutput(`App ID: ${txn['application-index']}`, 2 + offset)
       this.writeOutput('Logs:', 2 + offset)
@@ -352,12 +346,11 @@ class AlgoCLI {
       this.writeOutput('Local Deltas:', 2 + offset)
       this.writeOutput(JSON.stringify(txn['local-state-delta'] || [], null, 2), 4 + offset)
     }
-    
-    if (txn['asset-index']) { 
+
+    if (txn['asset-index']) {
       await this.logASA(txn['asset-index'], offset)
     }
 
-    
     const innerTxns = txn['inner-txns'] as Array<any>
 
     if (innerTxns) {
@@ -376,7 +369,7 @@ class AlgoCLI {
   logAppDrTxn (drr: algosdk.DryrunResult, gtxn: number = 0) {
     const txn = drr.txns[gtxn]
     this.writeOutput(`Opcode Cost: ${txn.cost}`, 2)
-    this.writeOutput(`Messages:\n    - ${txn.appCallMessages?.join('\n    - ')}`, 2)    
+    this.writeOutput(`Messages:\n    - ${txn.appCallMessages?.join('\n    - ')}`, 2)
     this.writeOutput('Trace:', 2)
     this.writeOutput(txn.appTrace({ maxValueWidth: process.stdout.columns / 3, topOfStackFirst: false }), 4)
   }
@@ -415,7 +408,7 @@ class AlgoCLI {
     return r
   }
 
-  async getHandle() {
+  async getHandle () {
     const wallets = await this.kmdClient.listWallets()
 
     // find kmdWallet
@@ -435,7 +428,7 @@ class AlgoCLI {
     return accounts.find(a => a.addr === addr)?.sk as Uint8Array
   }
 
-  async addAccount(name: string) {
+  async addAccount (name: string) {
     const handle = await this.getHandle()
 
     const newAccount = algosdk.generateAccount()
@@ -500,7 +493,6 @@ class AlgoCLI {
 
   // close the remaining balance of an account to another account
   async closeAccount (accountToClose: algosdk.Account, closeToAccount: algosdk.Account) {
-
     const info = await this.algodClient.accountInformation(accountToClose.addr).do()
     const balance = info.amount
     const mbr = info['min-balance']
@@ -508,12 +500,12 @@ class AlgoCLI {
     const amount = balance - mbr - (suggestedParams.fee | 1_000)
 
     if (amount <= 0) return
-    
+
     const txnObj = {
       suggestedParams,
       from: accountToClose.addr,
       to: closeToAccount.addr,
-      amount: amount
+      amount
     }
 
     const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject(txnObj).signTxn(accountToClose.sk)
@@ -540,7 +532,7 @@ class AlgoCLI {
       const results = await Promise.all(txIDs.map(id => algosdk.waitForConfirmation(this.algodClient, id, 3)))
       return results
     } catch (e: any) {
-      if(e.response.body.message) {
+      if (e.response.body.message) {
         console.error(e.response.body.message)
       } else {
         throw e
@@ -598,22 +590,22 @@ if (docRes.send) {
   algoCli.getTxns().then(async txns => {
     await algoCli.send(txns)
   })
-} else if(docRes.accounts) {
+} else if (docRes.accounts) {
   const algoCli = new AlgoCLI()
 
-  if(docRes.fund) {
+  if (docRes.fund) {
     algoCli.fundAllAccounts()
-  } else if(docRes.close) {
+  } else if (docRes.close) {
     algoCli.closeAllAccounts()
-  } else if(docRes.info) {
+  } else if (docRes.info) {
     algoCli.accountsInfo()
   }
-} else if(docRes.init) {
+} else if (docRes.init) {
   const staticFiles = ['.algo.config.js', 'contract.py', 'approval.teal', 'clear.teal']
 
   staticFiles.forEach(f => {
     if (!fs.existsSync(f)) {
-      const source = __dirname + '/../static/' + f
+      const source = path.join(__dirname, '/../static/', f)
       const dest = './' + f
       fs.copyFileSync(source, dest)
     }
