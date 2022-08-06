@@ -86,7 +86,16 @@ class AlgoCLI {
 
   async fundAllAccounts () {
     const accounts = await this.getAllAccounts()
-    const funder = accounts[0]
+    const data = this.getData()
+
+    let funder = accounts.find(a => a.addr === data.defaultFunder)
+
+    if (funder === undefined) {
+      const acctInfos = await Promise.all(accounts.map((a) => this.algodClient.accountInformation(a.addr).do()))
+      const highestBalance = acctInfos.sort((a, b) => b.amount - a.amount)[0]
+      funder = accounts.find(a => a.addr === highestBalance.address) as algosdk.Account
+      this.updateData({ defaultFunder: funder.addr })
+    }
 
     for (const [name, accountConfig] of Object.entries(this.config.accounts)) {
       let account: algosdk.Account
