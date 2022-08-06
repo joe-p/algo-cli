@@ -81,6 +81,7 @@ class AlgoCLI {
       this.writeOutput(`Address: ${info.address}`, 2)
       this.writeOutput(`Balance: ${info.amount.toLocaleString()}`, 2)
       this.writeOutput(`Minimum Balance Required: ${info['min-balance'].toLocaleString()}`, 2)
+      this.writeOutput(`Mnemonic: ${algosdk.secretKeyToMnemonic(account.sk)}`, 2)
     }
   }
 
