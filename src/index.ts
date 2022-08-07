@@ -114,9 +114,10 @@ class AlgoCLI {
       const initialBalance = (accountConfig as any).initialBalance
       const fundAmount = initialBalance - balance
 
-      await this.fundAccount(funder, account, fundAmount)
-
-      this.writeOutput(`Funded ${name} with an additional ${fundAmount.toLocaleString()} microALGO for a balance of ${initialBalance.toLocaleString()} microALGO`, 2)
+      if(fundAmount > 0) {
+        await this.fundAccount(funder, account, fundAmount)
+        this.writeOutput(`Funded ${name} with an additional ${fundAmount.toLocaleString()} microALGO for a balance of ${initialBalance.toLocaleString()} microALGO`, 2)
+      }
     }
   }
 
