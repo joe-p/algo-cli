@@ -1,7 +1,7 @@
 This tool is a WIP and not officially supported by Algorand. Currently it supports the following transactions:
 - Payment
 - App create
-- NoOp call
+- Application call
 
 # Installation
 To install the algo cli tool clone this repo and run the following command: `npm i && npx tsc && npm link`
@@ -68,7 +68,7 @@ With txn1, txn2, and txnN being the 1st, 2nd, and Nth transaction in a transacti
 `rekeyTo` - Address to rekey the `from` account to
 
 #### ApplicationCall
-`onComplete` - The on-complete action of the call. Currently supported is `NoOp`
+`onComplete` - The [OnComplete](https://developer.algorand.org/docs/get-details/dapps/avm/teal/specification/#oncomplete) action of the call. Can be name or number
 `args` - The application arguments. Numbers will be interpreted as ints and strings will be interpreted as byte arrays
 `accounts` - Accounts array. Values can be named accounts or applications
 `apps` - App array. Values can be named accounts

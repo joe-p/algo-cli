@@ -114,7 +114,7 @@ class AlgoCLI {
       const initialBalance = (accountConfig as any).initialBalance
       const fundAmount = initialBalance - balance
 
-      if(fundAmount > 0) {
+      if (fundAmount > 0) {
         await this.fundAccount(funder, account, fundAmount)
         this.writeOutput(`Funded ${name} with an additional ${fundAmount.toLocaleString()} microALGO for a balance of ${initialBalance.toLocaleString()} microALGO`, 2)
       }
@@ -164,12 +164,9 @@ class AlgoCLI {
       txn.appID = data[txn.appID]
     }
 
-    switch (txn.onComplete) {
-      case ('NoOp'):
-        txn.onComplete = algosdk.OnApplicationComplete.NoOpOC
-        break
-      default:
-        break
+    if (typeof txn.onComplete === 'string') {
+      // @ts-ignore
+      txn.onComplete = algosdk.OnApplicationComplete[`${txn.onComplete}OC`]
     }
 
     if (txn.teal) txn.teal.approval = await this.compileProgram(fs.readFileSync(txn.teal.approval, 'utf-8'))
@@ -242,21 +239,23 @@ class AlgoCLI {
     )
   }
 
-  async getApplicationNoOpTxn (txn: any) {
+  async getApplicationCallTxn (txn: any) {
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
-    return algosdk.makeApplicationNoOpTxn(
-      txn.from.addr,
-      suggestedParams,
-      txn.appID,
-      txn.args,
-      txn.accounts,
-      txn.apps,
-      txn.assets,
-      txn.note,
-      txn.lease,
-      txn.rekeyTo
-    )
+    return (algosdk.makeApplicationCallTxnFromObject(
+      {
+        suggestedParams,
+        onComplete: txn.nComplete,
+        from: txn.from.addr,
+        appIndex: txn.appID,
+        appArgs: txn.args,
+        accounts: txn.accounts,
+        foreignApps: txn.apps,
+        note: txn.note,
+        lease: txn.lease,
+        rekeyTo: txn.rekeyTo
+      }
+    ))
   }
 
   async getTxns () {
@@ -275,7 +274,7 @@ class AlgoCLI {
           txnObjs[txn.name] = await this.getApplicationCreateTxn(txn)
           break
         case ('ApplicationCall'):
-          txnObjs[txn.name] = await this.getApplicationNoOpTxn(txn)
+          txnObjs[txn.name] = await this.getApplicationCallTxn(txn)
           break
         case ('Payment'):
           txnObjs[txn.name] = await this.getPaymentTxn(txn)
