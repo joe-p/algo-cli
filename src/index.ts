@@ -38,8 +38,8 @@ class AlgoCLI {
   kmdPassword: string
   config: any
 
-  constructor () {
-    this.config = require(`${process.cwd()}/.algo.config.js`)
+  constructor (config: any = require(`${process.cwd()}/.algo.config.js`)) {
+    this.config = config
     this.algodClient = new algosdk.Algodv2(this.config.algod.token, this.config.algod.server, this.config.algod.port)
     this.kmdClient = new algosdk.Kmd(this.config.kmd.token, this.config.kmd.server, this.config.kmd.port)
     this.kmdWallet = this.config.kmd.wallet
@@ -138,7 +138,7 @@ class AlgoCLI {
     return account
   }
 
-  transformAccountField(accountString: string, data: any, accounts: Array<algosdk.Account>) {
+  transformAccountField (accountString: string, data: any, accounts: Array<algosdk.Account>) {
     let account = accountString as String | algosdk.Account | undefined
 
     if (accountString && !algosdk.isValidAddress(accountString)) {
@@ -243,13 +243,13 @@ class AlgoCLI {
     )
   }
 
-  async getAssetCreationTxn(txn: any) {
+  async getAssetCreationTxn (txn: any) {
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
     return algosdk.makeAssetCreateTxnWithSuggestedParams(
-      txn.from.addr, 
+      txn.from.addr,
       txn.note,
-      txn.total, 
+      txn.total,
       txn.decimals,
       txn.defaultFrozen,
       txn.manager,
@@ -265,7 +265,7 @@ class AlgoCLI {
     )
   }
 
-  async getAssetConfigTxn(txn: any) {
+  async getAssetConfigTxn (txn: any) {
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
     return algosdk.makeAssetConfigTxnWithSuggestedParams(
@@ -282,7 +282,7 @@ class AlgoCLI {
     )
   }
 
-  async getAssetFreezeTxn(txn: any) {
+  async getAssetFreezeTxn (txn: any) {
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
     return algosdk.makeAssetFreezeTxnWithSuggestedParams(
@@ -296,11 +296,11 @@ class AlgoCLI {
     )
   }
 
-  async getAssetDestroyTxn(txn: any) {
+  async getAssetDestroyTxn (txn: any) {
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
     return algosdk.makeAssetDestroyTxnWithSuggestedParams(
-      txn.from.addr, 
+      txn.from.addr,
       txn.note,
       txn.assetID,
       suggestedParams,
@@ -308,7 +308,7 @@ class AlgoCLI {
     )
   }
 
-  async getAssetTrasnferTxn(txn: any) {
+  async getAssetTrasnferTxn (txn: any) {
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
     return algosdk.makeAssetTransferTxnWithSuggestedParams(
@@ -352,7 +352,7 @@ class AlgoCLI {
         this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
         execSync(txn.teal.compileCmd)
       }
-      
+
       txn = await this.transformConfigTxn(txn)
 
       // @ts-ignore
