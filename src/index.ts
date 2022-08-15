@@ -8,7 +8,7 @@ import * as accountMethods from './methods/account_methods'
 import * as inputMethods from './methods/input_methods'
 import * as outputMethods from './methods/output_methods'
 
-const doc = `
+export const doc = `
 Usage:
   algo send <name>
   algo accounts (fund | close | info)
@@ -16,12 +16,17 @@ Usage:
   algo reset
   algo -h | --help | --version
 `
+interface Options {
+  config?: any
+  logFunction?: (str: string) => void
+}
 
 export class AlgoCLI {
   kmdClient!: algosdk.Kmd
   algodClient!: algosdk.Algodv2
   kmdWallet!: string
   kmdPassword!: string
+  logFunction!: CallableFunction
   config: any
 
   public getPaymentTxn = transactionMethods.getPaymentTxn
@@ -61,9 +66,12 @@ export class AlgoCLI {
   public getReadableBytes = outputMethods.getReadableBytes
   public getReadableGlobalState = outputMethods.getReadableGlobalState
 
-  constructor (docRes: any = docopt(doc), config: any = require(`${process.cwd()}/.algo.config.js`)) {
-    this.config = config
+  constructor (options: Options = {}) {
+    this.config = options.config || require(`${process.cwd()}/.algo.config.js`)
+    this.logFunction = options.logFunction || console.log
+  }
 
+  public async execute (docRes: any = docopt(doc), ){
     if (docRes.send) {
       this.initializeConnections()
       this.getTxns(docRes).then(async txns => {
@@ -73,11 +81,11 @@ export class AlgoCLI {
       this.initializeConnections()
     
       if (docRes.fund) {
-        this.fundAllAccounts()
+        await this.fundAllAccounts()
       } else if (docRes.close) {
-        this.closeAllAccounts()
+        await this.closeAllAccounts()
       } else if (docRes.info) {
-        this.accountsInfo()
+        await this.accountsInfo()
       }
     } else if (docRes.init) {
       const staticFiles = ['.algo.config.js', 'contract.py', 'approval.teal', 'clear.teal']
@@ -99,7 +107,7 @@ export class AlgoCLI {
       fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
     
       this.initializeConnections()
-      this.fundAllAccounts()
+      await this.fundAllAccounts()
     }
   }
 
@@ -110,5 +118,3 @@ export class AlgoCLI {
     this.kmdPassword = this.config.kmd.password
   }
 }
-
-new AlgoCLI()

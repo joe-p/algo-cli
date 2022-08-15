@@ -4,3 +4,4 @@ node_modules/
 *.teal
 .algo.data.json
 !static/*.teal
+__test__/test.js*

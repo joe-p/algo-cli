@@ -84,7 +84,7 @@ export async function logTxn (this: AlgoCLI, txn: any, txnID: string, offset: nu
 }
 
 export function writeOutput (this: AlgoCLI, str: string, count: number = 0) {
-  console.log(str.replace(/^/gm, ' '.repeat(count)))
+  this.logFunction(str.replace(/^/gm, ' '.repeat(count)))
 }
 
 export function logAppDrTxn (this: AlgoCLI, drr: algosdk.DryrunResult, gtxn: number = 0) {
