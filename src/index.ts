@@ -1,7 +1,7 @@
 import { docopt } from 'docopt'
 import * as fs from 'fs'
 import algosdk from 'algosdk'
-import { exec } from 'child_process'
+import { execSync } from 'child_process'
 import { exit } from 'process'
 import path from 'path'
 
@@ -220,11 +220,6 @@ class AlgoCLI {
   }
 
   async getApplicationCreateTxn (txn: any) {
-    if (txn.teal.compileCmd) {
-      this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
-      compile(txn.teal.compileCmd)
-    }
-
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
     return algosdk.makeApplicationCreateTxn(
@@ -353,7 +348,13 @@ class AlgoCLI {
     const txnObjs = {} as any
 
     for (let txn of txns) {
+      if (txn.teal?.compileCmd) {
+        this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
+        execSync(txn.teal.compileCmd)
+      }
+      
       txn = await this.transformConfigTxn(txn)
+
       // @ts-ignore
       txnObjs[txn.name] = await this[`get${txn.type}Txn`](txn)
     }
@@ -672,20 +673,6 @@ class AlgoCLI {
 
     return algosdk.makeApplicationCallTxnFromObject(appObj).signTxn(from.sk)
   }
-}
-
-function compile (compileCmd: string) {
-  exec(compileCmd, (error, stdout, stderr) => {
-    if (error) {
-      console.error(error.message)
-      return
-    }
-    if (stderr) {
-      console.error(stderr)
-      return
-    }
-    console.log(stdout)
-  })
 }
 
 if (docRes.send) {
