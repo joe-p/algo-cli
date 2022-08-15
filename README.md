@@ -15,22 +15,28 @@ This will install the dependencies, compile the typescript, and add the algo bin
 Configuration for this tool is done per-directory in `.algo.config.js`. To see an example configuration file, the default configuration can be seen [here](static/.algo.config.js). 
 
 ### Top-Level
-`algod` - The configuration of the connection to algod
-`kmd` - The configuration of the connection to kmd
-`accounts` - Named accounts to use when using the `accounts` or `send` sub-command
-`txns` - Named group of transactions that can be sent with the `send` sub-command
+| Key        | Description                                                              |
+| ---------- | ------------------------------------------------------------------------ |
+| `algod`    | The configuration of the connection to algod                             |
+| `kmd`      | The configuration of the connection to kmd                               |
+| `accounts` | Named accounts to use when using the `accounts` or `send` sub-command    |
+| `txns`     | Named group of transactions that can be sent with the `send` sub-command |
 
 ### algod
-`server` - The hostname/IP of the algod HTTP server
-`token` - The token to use in HTTP requests
-`port` - The port of the algod HTTP server 
+| Key      | Description                              |
+| -------- | ---------------------------------------- |
+| `server` | The hostname/IP of the algod HTTP server |
+| `token`  | The token to use in HTTP requests        |
+| `port`   | The port of the algod HTTP server        |
 
 ### kmd
-`server` - The hostname/IP of the kmd HTTP server
-`token` - The token to use in HTTP requests
-`port` - The port of the kmd HTTP server
-`wallet` - The name of the wallet to use for accounts
-`password` - The password for the given wallet
+| Key        | Description                                |
+| ---------- | ------------------------------------------ |
+| `server`   | The hostname/IP of the kmd HTTP server     |
+| `token`    | The token to use in HTTP requests          |
+| `port`     | The port of the kmd HTTP server            |
+| `wallet`   | The name of the wallet to use for accounts |
+| `password` | The password for the given wallet          |
 
 ### accounts
 Accounts are defined in the following format
@@ -42,8 +48,9 @@ name: {
 ```
 
 With properties having the following keys
-
-`initialBalance` - The initial balance the account should have when runninig the `fund` sub-command (in uALGO)
+| Key              | Description                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| `initialBalance` | The initial balance the account should have when runninig the `fund` sub-command (in uALGO) |
 
 ### txns
 
@@ -60,26 +67,32 @@ name: [
 With txn1, txn2, and txnN being the 1st, 2nd, and Nth transaction in a transaction group. Transactions have the following properties
 
 #### Common
-`type` - The type of transaction. Currently supported is `ApplicationCreate`, `ApplicationCall`, and `Payment`
-`name` - The name of the transaction. This is used when referring to created apps by a human-readable name and in `send` output
-`from` - Who the transaction is from. Can be a named account.
-`note` - Transaction note. Numbers are interpreted as ints and strings are interpreted as byte arrays
-`lease` - Lease field of the transaction
-`rekeyTo` - Address to rekey the `from` account to
+| Key       | Description                                                                                                            |
+| --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `type`    | The type of transaction. Currently supported is `ApplicationCreate`, `ApplicationCall`, and `Payment`                  |
+| `name`    | The name of the transaction. This is used when referring to created apps by a human-readable name and in `send` output |
+| `from`    | Who the transaction is from. Can be a named account.                                                                   |
+| `note`    | Transaction note. Numbers are interpreted as ints and strings are interpreted as byte arrays                           |
+| `lease`   | Lease field of the transaction                                                                                         |
+| `rekeyTo` | Address to rekey the `from` account to                                                                                 |
 
 #### ApplicationCall
-`onComplete` - The [OnComplete](https://developer.algorand.org/docs/get-details/dapps/avm/teal/specification/#oncomplete) action of the call. Can be name or number
-`args` - The application arguments. Numbers will be interpreted as ints and strings will be interpreted as byte arrays
-`accounts` - Accounts array. Values can be named accounts or applications
-`apps` - App array. Values can be named accounts
-`assets` - Asset array. Values can be named assets
-`appID` - ID of the application. Can be a named application
+| Key          | Description                                                                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onComplete` | The [OnComplete](https://developer.algorand.org/docs/get-details/dapps/avm/teal/specification/#oncomplete) action of the call. Can be name or number |
+| `args`       | The application arguments. Numbers will be interpreted as ints and strings will be interpreted as byte arrays                                        |
+| `accounts`   | Accounts array. Values can be named accounts or applications                                                                                         |
+| `apps`       | App array. Values can be named accounts                                                                                                              |
+| `assets`     | Asset array. Values can be named assets                                                                                                              |
+| `appID`      | ID of the application. Can be a named application                                                                                                    |
 
 #### ApplicationCreate
 Has all the same keys as `ApplicationCall` with the exception of `appID` and addition of the following keys
 
-`extraPages` - Amount of extra pages to use for the application
-`schema` - Application schema defined in the following format
+| Key          | Description                                        |
+| ------------ | -------------------------------------------------- |
+| `extraPages` | Amount of extra pages to use for the application   |
+| `schema`     | Application schema defined in the following format |
 
 ```js
 schema: {
@@ -93,8 +106,9 @@ schema: {
   }
 },
 ```
-
-`teal` - Information about TEAL files in the following format
+| Key    | Description                                          |
+| ------ | ---------------------------------------------------- |
+| `teal` | Information about TEAL files in the following format |
 
 ```js
 teal: {
@@ -105,24 +119,33 @@ teal: {
 ```
 
 #### Payment
-`to` - Account to send the payment to. Can be named account or application
-`amount` - Amount to send (in uALGO)
+| Key      | Description                                                         |
+| -------- | ------------------------------------------------------------------- |
+| `to`     | Account to send the payment to. Can be named account or application |
+| `amount` | Amount to send (in uALGO)                                           |
 
 ## Command Overview
 
 ### Send
-`algo send <name>` - submit the transaction group with the corresponding name defined in `.algo.config.js`
+| Command            | Description                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `algo send <name>` | Submit the transaction group with the corresponding name defined in `.algo.config.js` |
 
 ### Accounts
-`algo accounts fund` - fund all accounts to the specific `initialBalance` in `.algo.config.js` using the account with the most ALGO as the funder.
-`algo accounts info` - displays address, balance, minimum balance requirement, and mnemonic for each account
-`algo accounts close` - sends `balance - minimum_balance_required` ALGO to the funder
+| Command               | Description                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `algo accounts info`  | Displays address, balance, minimum balance requirement, and mnemonic for each account |
+| `algo accounts close` | Sends `balance - minimum_balance_required` ALGO to the funder                         |
 
 ### Init
-`algo init` - generate `.algo.config.js`, `approval.teal`, `clear.teal`, and `contract.py` in the current directory
+| Command     | Description                                                                                           |
+| ----------- | ----------------------------------------------------------------------------------------------------- |
+| `algo init` | Generate `.algo.config.js`, `approval.teal`, `clear.teal`, and `contract.py` in the current directory |
 
 ### Reset
-`algo reset` - deletes the data in `.algo.data.json`, creates new accounts, and then funds the new accounts
+| Command      | Description                                                                                  |
+| ------------ | -------------------------------------------------------------------------------------------- |
+| `algo reset` | Deletes the data in `.algo.data.json`, creates new accounts, and then funds the new accounts |
 
 # Example Output
 
