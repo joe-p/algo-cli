@@ -138,23 +138,27 @@ class AlgoCLI {
     return account
   }
 
+  transformAccountField(accountString: string, data: any, accounts: Array<algosdk.Account>) {
+    let account = accountString as String | algosdk.Account | undefined
+
+    if (accountString && !algosdk.isValidAddress(accountString)) {
+      const addr = data[accountString]
+
+      account = accounts.find(a => a.addr === addr)
+
+      if (account === undefined) account = algosdk.getApplicationAddress(data[accountString])
+    }
+
+    return account
+  }
+
   async transformConfigTxn (txn: any) {
     const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
-    const accounts = await this.getAllAccounts()
+    const accounts = await this.getAllAccounts();
 
-    if (!algosdk.isValidAddress(txn.from)) {
-      const addr = data[txn.from]
-      txn.from = this.findAccount(accounts, addr, txn.from)
-    }
-
-    if (txn.to && !algosdk.isValidAddress(txn.to)) {
-      const addr = data[txn.to]
-      const initialValue = txn.to
-
-      txn.to = accounts.find(a => a.addr === addr)
-
-      if (!algosdk.isValidAddress(txn.to)) txn.to = algosdk.getApplicationAddress(data[initialValue])
-    }
+    ['from', 'to', 'manager', 'clawback', 'freeze', 'reserve', 'revocationTarget'].forEach(f => {
+      txn[f] = this.transformAccountField(txn[f], data, accounts)
+    })
 
     if (typeof (txn.note) === 'string') {
       txn.note = new Uint8Array(Buffer.from(txn.note))
@@ -216,6 +220,11 @@ class AlgoCLI {
   }
 
   async getApplicationCreateTxn (txn: any) {
+    if (txn.teal.compileCmd) {
+      this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
+      compile(txn.teal.compileCmd)
+    }
+
     const suggestedParams = await this.algodClient.getTransactionParams().do()
 
     return algosdk.makeApplicationCreateTxn(
@@ -236,6 +245,87 @@ class AlgoCLI {
       txn.lease,
       txn.rekeyTo,
       txn.extraPages
+    )
+  }
+
+  async getAssetCreationTxn(txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+
+    return algosdk.makeAssetCreateTxnWithSuggestedParams(
+      txn.from.addr, 
+      txn.note,
+      txn.total, 
+      txn.decimals,
+      txn.defaultFrozen,
+      txn.manager,
+      txn.reserve,
+      txn.freeze,
+      txn.clawback,
+      txn.unitName,
+      txn.name,
+      txn.url,
+      txn.metadataHash,
+      suggestedParams,
+      txn.rekeyTo
+    )
+  }
+
+  async getAssetConfigTxn(txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+
+    return algosdk.makeAssetConfigTxnWithSuggestedParams(
+      txn.from.addr,
+      txn.note,
+      txn.assetID,
+      txn.manager,
+      txn.reserve,
+      txn.freeze,
+      txn.clawback,
+      suggestedParams,
+      false,
+      txn.rekeyTo
+    )
+  }
+
+  async getAssetFreezeTxn(txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+
+    return algosdk.makeAssetFreezeTxnWithSuggestedParams(
+      txn.from.addr,
+      txn.note,
+      txn.assetID,
+      txn.freezeTarget,
+      txn.freezeState,
+      suggestedParams,
+      txn.rekeyTo
+    )
+  }
+
+  async getAssetDestroyTxn(txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+
+    return algosdk.makeAssetDestroyTxnWithSuggestedParams(
+      txn.from.addr, 
+      txn.note,
+      txn.assetID,
+      suggestedParams,
+      txn.rekeyTo
+    )
+  }
+
+  async getAssetTrasnferTxn(txn: any) {
+    const suggestedParams = await this.algodClient.getTransactionParams().do()
+
+    return algosdk.makeAssetTransferTxnWithSuggestedParams(
+      txn.from.addr,
+      txn.to,
+      txn.closeRemainderTo,
+      txn.revocationTarget,
+      txn.amount,
+      txn.note,
+      txn.assetID,
+      suggestedParams,
+      txn.rekeyTo
     )
   }
 
@@ -264,24 +354,8 @@ class AlgoCLI {
 
     for (let txn of txns) {
       txn = await this.transformConfigTxn(txn)
-
-      switch (txn.type) {
-        case ('ApplicationCreate'):
-          if (txn.teal.compileCmd) {
-            this.writeOutput(`Running '${txn.teal.compileCmd}' to generate TEAL`)
-            compile(txn.teal.compileCmd)
-          }
-          txnObjs[txn.name] = await this.getApplicationCreateTxn(txn)
-          break
-        case ('ApplicationCall'):
-          txnObjs[txn.name] = await this.getApplicationCallTxn(txn)
-          break
-        case ('Payment'):
-          txnObjs[txn.name] = await this.getPaymentTxn(txn)
-          break
-        default:
-          break
-      }
+      // @ts-ignore
+      txnObjs[txn.name] = await this[`get${txn.type}Txn`](txn)
     }
 
     return txnObjs
