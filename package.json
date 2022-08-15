@@ -3,8 +3,8 @@
   "bin": "./bin/algo.js",
   "scripts": {
     "start": "tsc && node dist/index.js",
-    "lint": "eslint ./src/*",
-    "fix": "eslint ./src/* --fix"
+    "lint": "eslint ./src/**/*",
+    "fix": "eslint ./src/**/* --fix"
   },
   "dependencies": {
     "algosdk": "^1.18.0",
