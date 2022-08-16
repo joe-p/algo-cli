@@ -83,48 +83,48 @@ describe('send createApp', () => {
 
   it('Displays name (dryrun)', async () => {
     const line = logOutput[1]
-    expect(line).toBe("createAppTest Dryrun:")
+    expect(line).toBe('createAppTest Dryrun:')
   })
 
   it('Displays opcode cost', async () => {
     const line = logOutput[2]
-    expect(line).toBe("  Opcode Cost: 11")
+    expect(line).toBe('  Opcode Cost: 11')
   })
 
   it('Displays messages', async () => {
     const lines = logOutput.slice(3, 6)
-    expect(lines[0]).toBe("  Messages:")
-    expect(lines[1]).toBe("      - ApprovalProgram")
-    expect(lines[2]).toBe("      - PASS")
+    expect(lines[0]).toBe('  Messages:')
+    expect(lines[1]).toBe('      - ApprovalProgram')
+    expect(lines[2]).toBe('      - PASS')
   })
 
   it('Displays trace', async () => {
     const lines = logOutput.slice(6, 8)
-    expect(lines[0]).toBe("  Trace:")
+    expect(lines[0]).toBe('  Trace:')
     expect(lines[1]).toMatch(/pc#/)
   })
 
   it('Displays name (transaction)', async () => {
     const line = logOutput[21]
-    expect(line).toBe("createAppTest Transaction:")
+    expect(line).toBe('createAppTest Transaction:')
   })
 
   it('Displays TX ID', async () => {
     const key = logOutput[22].split(':')[0].trim()
     const value = logOutput[22].split(':')[1].trim()
-    expect(key).toBe("TX ID")
+    expect(key).toBe('TX ID')
     expect(value).toHaveLength(52)
   })
 
   it('Displays From', async () => {
     const key = logOutput[23].split(':')[0].trim()
     const value = logOutput[23].split(':')[1].trim()
-    expect(key).toBe("From")
+    expect(key).toBe('From')
     expect(algosdk.isValidAddress(value)).toBeTruthy()
   })
 
   it('Displays App ID', async () => {
-    expect(logOutput[24]).toMatch(/^  App ID: \d+$/)
+    expect(logOutput[24]).toMatch(/^ {2}App ID: \d+$/)
   })
 
   it('Displays Logs', async () => {
@@ -134,10 +134,15 @@ describe('send createApp', () => {
 
   it('Displays Global Delta', async () => {
     expect(logOutput[27]).toBe('  Global Delta:')
-    expect(logOutput[29]).toMatch(/^      "globalRound": \d+$/)
+    expect(logOutput[29]).toMatch(/^ {6}"globalRound": \d+$/)
   })
 
-  // TODO: Local delta
+  it('Displays Local Delta', async () => {
+    expect(logOutput[31]).toBe('  Local Deltas:')
+    const addr = logOutput[32].split(':')[0].trim()
+    expect(algosdk.isValidAddress(addr)).toBeTruthy()
+    expect(logOutput[34]).toMatch(/^ {8}"localRound": \d+$/)
+  })
 
   afterAll(async () => {
     await execute('accounts close')

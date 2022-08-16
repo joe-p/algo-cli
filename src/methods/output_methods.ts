@@ -65,7 +65,11 @@ export async function logTxn (this: AlgoCLI, txn: any, txnID: string, offset: nu
     this.writeOutput('Global Delta:', 2 + offset)
     this.writeOutput(JSON.stringify(this.getReadableGlobalState(txn['global-state-delta'] as Array<GlobalStateDelta>), null, 2), 4 + offset)
     this.writeOutput('Local Deltas:', 2 + offset)
-    this.writeOutput(JSON.stringify(txn['local-state-delta'] || [], null, 2), 4 + offset)
+
+    txn['local-state-delta'].forEach((state: any) => {
+      this.writeOutput(`${state.address}:`, 4 + offset)
+      this.writeOutput(JSON.stringify(this.getReadableGlobalState(state.delta as Array<GlobalStateDelta>), null, 2), 6 + offset)
+    })
   }
 
   if (txn['asset-index']) {
