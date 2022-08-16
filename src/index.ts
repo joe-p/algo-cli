@@ -74,9 +74,8 @@ export class AlgoCLI {
   public async execute (docRes: any = docopt(doc), ){
     if (docRes.send) {
       this.initializeConnections()
-      this.getTxns(docRes).then(async txns => {
-        await this.send(txns)
-      })
+      const txns = await this.getTxns(docRes)
+      await this.send(txns)
     } else if (docRes.accounts) {
       this.initializeConnections()
     
