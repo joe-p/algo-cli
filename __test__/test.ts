@@ -5,7 +5,8 @@ import algosdk from 'algosdk'
 jest.setTimeout(10_000)
 
 function logFunction (str: string) {
-  logOutput.push(str)
+  const lines = str.split('\n')
+  logOutput = logOutput.concat(lines)
 }
 
 function clearLog () {
@@ -22,26 +23,20 @@ const cli = new AlgoCLI({ logFunction })
 
 describe('accounts info', () => {
   beforeAll(async () => {
-    await execute('accounts fund')
-    await execute('accounts close')
     await execute('reset')
+    clearLog()
+    await execute('accounts info')
   })
 
   it('Displays 10 lines of output', async () => {
-    clearLog()
-    await execute('accounts info')
     expect(logOutput.length).toBe(10)
   })
 
   it('Displays name', async () => {
-    clearLog()
-    await execute('accounts info')
     expect(logOutput[0]).toBe('alice:')
   })
 
   it('Displays address', async () => {
-    clearLog()
-    await execute('accounts info')
     const key = logOutput[1].split(':')[0].trim()
     const value = logOutput[1].split(':')[1].trim()
     expect(key).toBe('Address')
@@ -49,8 +44,6 @@ describe('accounts info', () => {
   })
 
   it('Displays balance', async () => {
-    clearLog()
-    await execute('accounts info')
     const key = logOutput[2].split(':')[0].trim()
     const value = logOutput[2].split(':')[1].trim()
     expect(key).toBe('Balance')
@@ -58,8 +51,6 @@ describe('accounts info', () => {
   })
 
   it('Displays MBR', async () => {
-    clearLog()
-    await execute('accounts info')
     const key = logOutput[3].split(':')[0].trim()
     const value = logOutput[3].split(':')[1].trim()
     expect(key).toBe('Minimum Balance Required')
@@ -67,11 +58,88 @@ describe('accounts info', () => {
   })
 
   it('Displays mnemonic', async () => {
-    clearLog()
-    await execute('accounts info')
     const key = logOutput[4].split(':')[0].trim()
     const value = logOutput[4].split(':')[1].trim()
     expect(key).toBe('Mnemonic')
     expect(value.split(' ').length).toBe(25)
+  })
+
+  afterAll(async () => {
+    await execute('accounts close')
+  })
+})
+
+describe('send createApp', () => {
+  beforeAll(async () => {
+    await execute('reset')
+    clearLog()
+    await execute('send createApp')
+  })
+
+  it('Displays compilation line', async () => {
+    const line = logOutput[0]
+    expect(line).toBe("Running 'python3 contract.py' to generate TEAL")
+  })
+
+  it('Displays name (dryrun)', async () => {
+    const line = logOutput[1]
+    expect(line).toBe("createAppTest Dryrun:")
+  })
+
+  it('Displays opcode cost', async () => {
+    const line = logOutput[2]
+    expect(line).toBe("  Opcode Cost: 11")
+  })
+
+  it('Displays messages', async () => {
+    const lines = logOutput.slice(3, 6)
+    expect(lines[0]).toBe("  Messages:")
+    expect(lines[1]).toBe("      - ApprovalProgram")
+    expect(lines[2]).toBe("      - PASS")
+  })
+
+  it('Displays trace', async () => {
+    const lines = logOutput.slice(6, 8)
+    expect(lines[0]).toBe("  Trace:")
+    expect(lines[1]).toMatch(/pc#/)
+  })
+
+  it('Displays name (transaction)', async () => {
+    const line = logOutput[21]
+    expect(line).toBe("createAppTest Transaction:")
+  })
+
+  it('Displays TX ID', async () => {
+    const key = logOutput[22].split(':')[0].trim()
+    const value = logOutput[22].split(':')[1].trim()
+    expect(key).toBe("TX ID")
+    expect(value).toHaveLength(52)
+  })
+
+  it('Displays From', async () => {
+    const key = logOutput[23].split(':')[0].trim()
+    const value = logOutput[23].split(':')[1].trim()
+    expect(key).toBe("From")
+    expect(algosdk.isValidAddress(value)).toBeTruthy()
+  })
+
+  it('Displays App ID', async () => {
+    expect(logOutput[24]).toMatch(/^  App ID: \d+$/)
+  })
+
+  it('Displays Logs', async () => {
+    expect(logOutput[25]).toBe('  Logs:')
+    expect(logOutput[26]).toBe('    - Hello World!')
+  })
+
+  it('Displays Global Delta', async () => {
+    expect(logOutput[27]).toBe('  Global Delta:')
+    expect(logOutput[29]).toMatch(/^      "globalRound": \d+$/)
+  })
+
+  // TODO: Local delta
+
+  afterAll(async () => {
+    await execute('accounts close')
   })
 })

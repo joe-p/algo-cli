@@ -4,7 +4,12 @@ import os
 
 
 def approval():
-    return Approve()
+    return Seq(
+        App.globalPut(Bytes("globalRound"), Global.round()),
+        App.localPut(Txn.sender(), Bytes("localRound"), Global.round()),
+        Log(Bytes("Hello World!")),
+        Approve()
+    )
 
 
 def clear():

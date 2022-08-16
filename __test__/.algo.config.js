@@ -24,19 +24,19 @@ module.exports = {
     }
   },
   txns: {
-    create: [
+    createApp: [
       {
         type: 'ApplicationCreate',
-        name: 'exampleApp',
-        onComplete: 'NoOp',
+        name: 'createAppTest',
+        onComplete: 'OptIn',
         from: 'alice',
         schema: {
           global: {
-            ints: 0,
+            ints: 1,
             bytes: 0
           },
           local: {
-            ints: 0,
+            ints: 1,
             bytes: 0
           }
         },
@@ -44,32 +44,17 @@ module.exports = {
           compileCmd: "python3 contract.py", // run this command before creating app
           approval: "./approval.teal",
           clear: "./clear.teal"
-        },
-        // args: [ 'hello world', 1337 ],
-        // accounts: [ 'bob' ],
-        // apps: [ 'anotherApp' ],
-        // assets: [ 1337 ],
-        // note: "this is a txn note",
-        // extraPages: 0,
-        // lease: undefined,
-        // rekeyTo: undefined,
+        }
       }
     ],
     call: [
       {
         type: 'ApplicationCall',
         onCompletion: 'NoOp',
-        from: 'bob',
+        from: 'alice',
         appID: 'exampleApp',
         name: 'exampleAppCall'
-      },
-      {
-        type: 'Payment',
-        from: 'bob',
-        amount: 100_000,
-        to: 'exampleApp',
-        name: 'examplePayment'
-      },
+      }
     ]
   }
 }
