@@ -2,6 +2,7 @@ import { AlgoCLI } from '../index'
 import algosdk from 'algosdk'
 import * as fs from 'fs'
 import { execSync } from 'child_process'
+import { exit } from 'process'
 
 export function getData (this: AlgoCLI) {
   return JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
@@ -34,6 +35,10 @@ export async function transformConfigTxn (this: AlgoCLI, txn: any) {
   }
 
   if (typeof (txn.appID) === 'string') {
+    if (!data[txn.appID]) {
+      console.log(`Invalid app ID (${txn.appID}) in ${txn.name}`)
+      exit(1)
+    }
     txn.appID = data[txn.appID]
   }
 

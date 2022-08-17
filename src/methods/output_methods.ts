@@ -55,7 +55,7 @@ export async function logTxn (this: AlgoCLI, txn: any, txnID: string, offset: nu
   if (nestedTxn.amt) this.writeOutput(`Amount: ${nestedTxn.amt.toLocaleString()}`, 2 + offset)
   if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`, 2 + offset)
 
-  if (txn['application-index']) {
+  if (txn.txn.txn.type === 'appl') {
     this.writeOutput(`App ID: ${txn['application-index']}`, 2 + offset)
     this.writeOutput('Logs:', 2 + offset)
     const logs = (txn.logs || []).map((b: any) => {
