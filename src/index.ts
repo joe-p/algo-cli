@@ -65,6 +65,7 @@ export class AlgoCLI {
   public logAppDrTxn = outputMethods.logAppDrTxn
   public getReadableBytes = outputMethods.getReadableBytes
   public getReadableGlobalState = outputMethods.getReadableGlobalState
+  public getAddress = outputMethods.getAddress
 
   constructor (options: Options = {}) {
     this.config = options.config || require(`${process.cwd()}/.algo.config.js`)

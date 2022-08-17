@@ -120,7 +120,8 @@ describe('send createApp', () => {
     const key = logOutput[23].split(':')[0].trim()
     const value = logOutput[23].split(':')[1].trim()
     expect(key).toBe('From')
-    expect(algosdk.isValidAddress(value)).toBeTruthy()
+    expect(algosdk.isValidAddress(value.split(' - ')[1])).toBeTruthy()
+    expect(value.split(' - ')[0]).toBe('alice')
   })
 
   it('Displays App ID', async () => {
@@ -139,8 +140,9 @@ describe('send createApp', () => {
 
   it('Displays Local Delta', async () => {
     expect(logOutput[31]).toBe('  Local Deltas:')
-    const addr = logOutput[32].split(':')[0].trim()
-    expect(algosdk.isValidAddress(addr)).toBeTruthy()
+    const acct = logOutput[32].split(':')[0].trim()
+    expect(algosdk.isValidAddress(acct.split(' - ')[1])).toBeTruthy()
+    expect(acct.split(' - ')[0]).toBe('alice')
     expect(logOutput[34]).toMatch(/^ {8}"localRound": \d+$/)
   })
 

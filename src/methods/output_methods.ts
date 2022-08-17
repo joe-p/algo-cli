@@ -47,11 +47,21 @@ export async function logASA (this: AlgoCLI, assetIndex: number, offset: number 
   this.writeOutput(`URL: ${atob(asa['url-b64'])}`, 2 + offset)
 }
 
+export async function getAddress (this: AlgoCLI, address: string) {
+  const data = this.getData() as any
+  for (const [name, addr] of Object.entries(data)) {
+    if (addr === address) {
+      return `${name} - ${addr}`
+    }
+  }
+
+  return address
+}
 export async function logTxn (this: AlgoCLI, txn: any, txnID: string, offset: number = 0) {
   const nestedTxn = txn.txn.txn
   this.writeOutput(`TX ID: ${txnID}`, 2 + offset)
-  this.writeOutput(`From: ${algosdk.encodeAddress(nestedTxn.snd)}`, 2 + offset)
-  if (nestedTxn.rcv) this.writeOutput(`To: ${algosdk.encodeAddress(nestedTxn.rcv)}`, 2 + offset)
+  this.writeOutput(`From: ${await this.getAddress(algosdk.encodeAddress(nestedTxn.snd))}`, 2 + offset)
+  if (nestedTxn.rcv) this.writeOutput(`To: ${await this.getAddress(algosdk.encodeAddress(nestedTxn.rcv))}`, 2 + offset)
   if (nestedTxn.amt) this.writeOutput(`Amount: ${nestedTxn.amt.toLocaleString()}`, 2 + offset)
   if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`, 2 + offset)
 
@@ -66,8 +76,8 @@ export async function logTxn (this: AlgoCLI, txn: any, txnID: string, offset: nu
     this.writeOutput(JSON.stringify(this.getReadableGlobalState(txn['global-state-delta'] as Array<GlobalStateDelta>), null, 2), 4 + offset)
     this.writeOutput('Local Deltas:', 2 + offset)
 
-    txn['local-state-delta'].forEach((state: any) => {
-      this.writeOutput(`${state.address}:`, 4 + offset)
+    txn['local-state-delta'].forEach(async (state: any) => {
+      this.writeOutput(`${await this.getAddress(state.address)}:`, 4 + offset)
       this.writeOutput(JSON.stringify(this.getReadableGlobalState(state.delta as Array<GlobalStateDelta>), null, 2), 6 + offset)
     })
   }
