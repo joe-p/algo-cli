@@ -28,6 +28,9 @@ export async function transformConfigTxn (this: AlgoCLI, txn: any) {
 
   ['from', 'to', 'manager', 'clawback', 'freeze', 'reserve', 'revocationTarget'].forEach(f => {
     txn[f] = this.transformAccountField(txn[f], data, accounts)
+    if (f !== 'from') {
+      txn[f] = txn[f]?.addr
+    }
   })
 
   if (typeof (txn.note) === 'string') {
