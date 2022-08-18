@@ -36,7 +36,7 @@ export async function transformConfigTxn (this: AlgoCLI, txn: any) {
 
   if (typeof (txn.appID) === 'string') {
     if (!data[txn.appID]) {
-      console.log(`Invalid app ID (${txn.appID}) in ${txn.name}`)
+      console.error(`Invalid app ID (${txn.appID}) in ${txn.name}`)
       exit(1)
     }
     txn.appID = data[txn.appID]
