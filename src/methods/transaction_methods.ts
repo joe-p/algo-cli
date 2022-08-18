@@ -159,7 +159,8 @@ export async function send (this: AlgoCLI, txns: any) {
   const signedTxnsPromises = gTxn.map(async t => t.signTxn(await this.getSK(algosdk.encodeAddress(t.from.publicKey))))
   const signedTxns = await Promise.all(signedTxnsPromises)
 
-  if (Object.values(txns).length === 1) {
+  const txnValues = Object.values(txns) as Array<any>
+  if (txnValues.length === 1 && txnValues[0].type === 'appl') {
     const dr = await this.createDryRunFromTxns(signedTxns)
     const drr = new algosdk.DryrunResult(await this.algodClient.dryrun(dr).do())
 
@@ -169,7 +170,7 @@ export async function send (this: AlgoCLI, txns: any) {
         this.logAppDrTxn(drr, index)
       }
     }
-  } else this.writeOutput('Skipping dryrun trace due to atomic transactions')
+  } else if (txnValues[0].type === 'appl') this.writeOutput('Skipping dryrun trace due to atomic transactions')
 
   const results = await this.sendTxns(signedTxns)
 
