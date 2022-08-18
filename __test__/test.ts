@@ -150,3 +150,54 @@ describe('send createApp', () => {
     await execute('accounts close')
   })
 })
+
+describe('send payment', () => {
+  beforeAll(async () => {
+    await execute('reset')
+    clearLog()
+    await execute('send payment')
+  })
+
+  it('Displays name', async () => {
+    const line = logOutput[0]
+    expect(line).toBe('paymentTest Transaction:')
+  })
+
+  it('Displays TX ID', async () => {
+    const key = logOutput[1].split(':')[0].trim()
+    const value = logOutput[1].split(':')[1].trim()
+    expect(key).toBe('TX ID')
+    expect(value).toHaveLength(52)
+  })
+
+  it('Displays From', async () => {
+    const key = logOutput[2].split(':')[0].trim()
+    const value = logOutput[2].split(':')[1].trim()
+    expect(key).toBe('From')
+    expect(algosdk.isValidAddress(value.split(' - ')[1])).toBeTruthy()
+    expect(value.split(' - ')[0]).toBe('alice')
+  })
+
+  it('Displays To', async () => {
+    const key = logOutput[3].split(':')[0].trim()
+    const value = logOutput[3].split(':')[1].trim()
+    expect(key).toBe('To')
+    expect(algosdk.isValidAddress(value.split(' - ')[1])).toBeTruthy()
+    expect(value.split(' - ')[0]).toBe('bob')
+  })
+
+  it('Displays Amount', async () => {
+    const key = logOutput[4].split(':')[0].trim()
+    const value = logOutput[4].split(':')[1].trim()
+    expect(key).toBe('Amount')
+    expect(value).toBe((100_000).toLocaleString())
+  })
+
+  it('Displays Fee', async () => {
+    const key = logOutput[5].split(':')[0].trim()
+    const value = logOutput[5].split(':')[1].trim()
+    expect(key).toBe('Fee')
+    expect(value).toBe((1_000).toLocaleString())
+  })
+
+})

@@ -47,13 +47,13 @@ module.exports = {
         }
       }
     ],
-    call: [
+    payment: [
       {
-        type: 'ApplicationCall',
-        onCompletion: 'NoOp',
+        name: 'paymentTest',
+        type: 'Payment',
         from: 'alice',
-        appID: 'exampleApp',
-        name: 'exampleAppCall'
+        to: 'bob',
+        amount: 100_000
       }
     ]
   }
