@@ -31,7 +31,7 @@ export class AlgoCLI {
 
   public getPaymentTxn = transactionMethods.getPaymentTxn
   public getApplicationCreateTxn = transactionMethods.getApplicationCreateTxn
-  public getAssetCreationTxn = transactionMethods.getAssetCreationTxn
+  public getAssetCreateTxn = transactionMethods.getAssetCreateTxn
   public getAssetConfigTxn = transactionMethods.getAssetConfigTxn
   public getAssetFreezeTxn = transactionMethods.getAssetFreezeTxn
   public getAssetDestroyTxn = transactionMethods.getAssetDestroyTxn

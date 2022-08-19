@@ -55,6 +55,25 @@ module.exports = {
         to: 'bob',
         amount: 100_000
       }
+    ],
+    createAsset:
+    [
+      {
+        name: 'createAssetTest',
+        type: 'AssetCreate',
+        from: 'alice',
+        assetName: 'Test ASA',
+        total: 100,
+        decimals: 1,
+        defaultFrozen: true,
+        manager: 'alice',
+        reserve: 'alice',
+        freeze: 'alice',
+        clawback: 'alice',
+        unitName: 'TAU',
+        url: 'example.com',
+        metadataHash: '123456789_123456789_123456789_12'
+      }
     ]
   }
 }

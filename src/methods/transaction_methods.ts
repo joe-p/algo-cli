@@ -52,7 +52,7 @@ export async function getApplicationCreateTxn (this: AlgoCLI, txn: any) {
   )
 }
 
-export async function getAssetCreationTxn (this: AlgoCLI, txn: any) {
+export async function getAssetCreateTxn (this: AlgoCLI, txn: any) {
   const suggestedParams = await this.algodClient.getTransactionParams().do()
 
   return algosdk.makeAssetCreateTxnWithSuggestedParams(
@@ -66,7 +66,7 @@ export async function getAssetCreationTxn (this: AlgoCLI, txn: any) {
     txn.freeze,
     txn.clawback,
     txn.unitName,
-    txn.name,
+    txn.assetName,
     txn.url,
     txn.metadataHash,
     suggestedParams,
@@ -186,7 +186,7 @@ export async function send (this: AlgoCLI, txns: any) {
       this.updateData(updatedID)
     }
 
-    this.logTxn(txn, unsignedTxns[index].txID())
+    await this.logTxn(txn, unsignedTxns[index].txID())
   }
 }
 

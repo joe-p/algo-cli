@@ -18,6 +18,14 @@ async function execute (cmd: string) {
   await cli.execute(docopt(doc, { argv }))
 }
 
+function aliceRegex (key: string, spaces: number = 2) {
+  return new RegExp(` {${spaces}}${key}: alice - \\S{58}$`)
+}
+
+function numberRegex (key: string, number: number, spaces: number = 2) {
+  return new RegExp(` {${spaces}}${key}: ${number.toLocaleString()}$`)
+}
+
 let logOutput = [] as Array<string>
 const cli = new AlgoCLI({ logFunction })
 
@@ -199,5 +207,87 @@ describe('send payment', () => {
     expect(key).toBe('Fee')
     expect(value).toBe((1_000).toLocaleString())
   })
+})
 
+describe.only('send createAsset', () => {
+  beforeAll(async () => {
+    await execute('reset')
+    clearLog()
+    await execute('send createAsset')
+  })
+
+  const expects = [
+    {
+      name: 'Displays name',
+      match: 'createAssetTest Transaction:'
+    },
+    {
+      name: 'Displays TX ID',
+      match: /^ {2}TX ID: \S{52}$/
+    },
+    {
+      name: 'Displays From',
+      match: aliceRegex('From')
+    },
+    {
+      name: 'Displays Fee',
+      match: numberRegex('Fee', 1_000)
+    },
+    {
+      name: 'Displays Asset ID',
+      match: /^ {2}Asset ID: \d+$/
+    },
+    {
+      name: 'Displays Asset Name',
+      match: '  Name: Test ASA'
+    },
+    {
+      name: 'Displays Unit Name',
+      match: '  Unit Name: TAU'
+    },
+    {
+      name: 'Displays Total',
+      match: numberRegex('Total', 100)
+    },
+    {
+      name: 'Displays Decimals',
+      match: numberRegex('Decimals', 1)
+    },
+    {
+      name: 'Displays Clawback',
+      match: aliceRegex('Clawback')
+    },
+    {
+      name: 'Displays Creator',
+      match: aliceRegex('Creator')
+    },
+    {
+      name: 'Displays Manager',
+      match: aliceRegex('Manager')
+    },
+    {
+      name: 'Displays Freeze',
+      match: aliceRegex('Freeze')
+    },
+    {
+      name: 'Displays Reserve',
+      match: aliceRegex('Reserve')
+    },
+    {
+      name: 'Displays Default Frozen',
+      match: '  Default Frozen: true'
+    },
+    {
+      name: 'Displays URL',
+      match: '  URL: example.com'
+    }
+
+  ]
+
+  expects.forEach(e => {
+    it(e.name, async () => {
+      const line = logOutput[expects.indexOf(e)]
+      expect(line).toMatch(e.match)
+    })
+  })
 })

@@ -38,11 +38,11 @@ export async function logASA (this: AlgoCLI, assetIndex: number, offset: number 
   this.writeOutput(`Unit Name: ${asa['unit-name']}`, 2 + offset)
   this.writeOutput(`Total: ${asa.total.toLocaleString()}`, 2 + offset)
   this.writeOutput(`Decimals: ${asa.decimals}`, 2 + offset)
-  this.writeOutput(`Clawback: ${asa.clawback}`, 2 + offset)
-  this.writeOutput(`Creator: ${asa.creator}`, 2 + offset)
-  this.writeOutput(`Manager: ${asa.manager}`, 2 + offset)
-  this.writeOutput(`Freeze: ${asa.freeze}`, 2 + offset)
-  this.writeOutput(`Reserve: ${asa.reserve}`, 2 + offset)
+  this.writeOutput(`Clawback: ${await this.getAddress(asa.clawback)}`, 2 + offset)
+  this.writeOutput(`Creator: ${await this.getAddress(asa.creator)}`, 2 + offset)
+  this.writeOutput(`Manager: ${await this.getAddress(asa.manager)}`, 2 + offset)
+  this.writeOutput(`Freeze: ${await this.getAddress(asa.freeze)}`, 2 + offset)
+  this.writeOutput(`Reserve: ${await this.getAddress(asa.reserve)}`, 2 + offset)
   this.writeOutput(`Default Frozen: ${asa['default-frozen']}`, 2 + offset)
   this.writeOutput(`URL: ${atob(asa['url-b64'])}`, 2 + offset)
 }
@@ -63,7 +63,7 @@ export async function logTxn (this: AlgoCLI, txn: any, txnID: string, offset: nu
   this.writeOutput(`From: ${await this.getAddress(algosdk.encodeAddress(nestedTxn.snd))}`, 2 + offset)
   if (nestedTxn.rcv) this.writeOutput(`To: ${await this.getAddress(algosdk.encodeAddress(nestedTxn.rcv))}`, 2 + offset)
   if (nestedTxn.amt) this.writeOutput(`Amount: ${nestedTxn.amt.toLocaleString()}`, 2 + offset)
-  if (nestedTxn.amt) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`, 2 + offset)
+  if (nestedTxn.fee) this.writeOutput(`Fee: ${nestedTxn.fee.toLocaleString()}`, 2 + offset)
 
   if (txn.txn.txn.type === 'appl') {
     this.writeOutput(`App ID: ${txn['application-index']}`, 2 + offset)
@@ -92,7 +92,7 @@ export async function logTxn (this: AlgoCLI, txn: any, txnID: string, offset: nu
     this.writeOutput('Inner Transactions:', 2 + offset)
     for (const innerTxn of innerTxns) {
       this.writeOutput(`${innerTxns.indexOf(innerTxn)}:`, offset + 4)
-      this.logTxn(innerTxn, txnID, offset + 6)
+      await this.logTxn(innerTxn, txnID, offset + 6)
     }
   }
 }
