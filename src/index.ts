@@ -28,6 +28,7 @@ export class AlgoCLI {
   kmdPassword!: string
   logFunction!: CallableFunction
   config: any
+  options: any
 
   public getPaymentTxn = transactionMethods.getPaymentTxn
   public getApplicationCreateTxn = transactionMethods.getApplicationCreateTxn
@@ -68,16 +69,22 @@ export class AlgoCLI {
   public getAddress = outputMethods.getAddress
 
   constructor (options: Options = {}) {
-    this.config = options.config || require(`${process.cwd()}/.algo.config.js`)
+    this.options = options
     this.logFunction = options.logFunction || console.log
+  }
+
+  public initConfig() {
+    this.config = this.config || this.options.config || require(`${process.cwd()}/.algo.config.js`)
   }
 
   public async execute (docRes: any = docopt(doc), ){
     if (docRes.send) {
+      this.initConfig()
       this.initializeConnections()
       const txns = await this.getTxns(docRes)
       await this.send(txns)
     } else if (docRes.accounts) {
+      this.initConfig()
       this.initializeConnections()
     
       if (docRes.fund) {
@@ -102,6 +109,7 @@ export class AlgoCLI {
         fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
       }
     } else if (docRes.reset) {
+      this.initConfig()
       if (fs.existsSync('./.algo.data.json')) fs.unlinkSync('./.algo.data.json')
     
       fs.writeFileSync('./.algo.data.json', JSON.stringify({}, null, 2))
