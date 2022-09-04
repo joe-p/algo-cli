@@ -7,6 +7,8 @@ import * as transactionMethods from './methods/transaction_methods'
 import * as accountMethods from './methods/account_methods'
 import * as inputMethods from './methods/input_methods'
 import * as outputMethods from './methods/output_methods'
+import * as deployMethods from './methods/deploy_methods'
+
 
 export const doc = `
 Usage:
@@ -14,6 +16,7 @@ Usage:
   algo accounts (fund | close | info)
   algo init
   algo reset
+  algo deploy <name>
   algo -h | --help | --version
 `
 interface Options {
@@ -68,6 +71,8 @@ export class AlgoCLI {
   public getReadableGlobalState = outputMethods.getReadableGlobalState
   public getAddress = outputMethods.getAddress
 
+  public deployServer = deployMethods.deployServer
+
   constructor (options: Options = {}) {
     this.options = options
     this.logFunction = options.logFunction || console.log
@@ -83,6 +88,11 @@ export class AlgoCLI {
       this.initializeConnections()
       const txns = await this.getTxns(docRes)
       await this.send(txns)
+    } else if (docRes.deploy) {
+      this.initConfig()
+      this.initializeDeployConnections()
+      const txns = Object.values(await this.getTxns(docRes, true)) as algosdk.Transaction[]
+      await this.deployServer(txns)
     } else if (docRes.accounts) {
       this.initConfig()
       this.initializeConnections()
@@ -124,5 +134,9 @@ export class AlgoCLI {
     this.kmdClient = new algosdk.Kmd(this.config.kmd.token, this.config.kmd.server, this.config.kmd.port)
     this.kmdWallet = this.config.kmd.wallet
     this.kmdPassword = this.config.kmd.password
+  }
+
+  private initializeDeployConnections () {
+    this.algodClient = new algosdk.Algodv2(this.config.deploy.token, this.config.deploy.server, this.config.deploy.port)
   }
 }

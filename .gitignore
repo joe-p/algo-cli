@@ -5,3 +5,4 @@ node_modules/
 .algo.data.json
 !static/*.teal
 __test__/test.js*
+public/

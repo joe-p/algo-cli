@@ -8,26 +8,33 @@ export function getData (this: AlgoCLI) {
   return JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
 }
 
-export function transformAccountField (this: AlgoCLI, accountString: string, data: any, accounts: Array<algosdk.Account>) {
+export function transformAccountField (this: AlgoCLI, accountString: string, data: any, accounts: Array<algosdk.Account>, deploy: boolean = false) {
   let account = accountString as String | algosdk.Account | undefined
 
   if (accountString && !algosdk.isValidAddress(accountString)) {
-    const addr = data[accountString]
+    if (deploy) {
+      account = { addr: this.config.accounts[accountString].deploy, sk: new Uint8Array() }
+    } else {
+      const addr = data[accountString]
 
-    account = accounts.find(a => a.addr === addr)
+      account = accounts.find(a => a.addr === addr)
 
-    if (account === undefined) account = algosdk.getApplicationAddress(data[accountString])
+      if (account === undefined) account = algosdk.getApplicationAddress(data[accountString])
+    }
   }
 
   return account
 }
 
-export async function transformConfigTxn (this: AlgoCLI, txn: any) {
+export async function transformConfigTxn (this: AlgoCLI, txn: any, deploy: boolean = false) {
   const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
-  const accounts = await this.getAllAccounts();
+
+  let accounts: algosdk.Account[] = []
+
+  if (!deploy) accounts = await this.getAllAccounts();
 
   ['from', 'to', 'manager', 'clawback', 'freeze', 'reserve', 'revocationTarget'].forEach(f => {
-    txn[f] = this.transformAccountField(txn[f], data, accounts)
+    txn[f] = this.transformAccountField(txn[f], data, accounts, deploy)
     if (f !== 'from') {
       txn[f] = txn[f]?.addr
     }
@@ -78,7 +85,7 @@ export async function transformConfigTxn (this: AlgoCLI, txn: any) {
   return txn
 }
 
-export async function getTxns (this: AlgoCLI, docRes: any) {
+export async function getTxns (this: AlgoCLI, docRes: any, deploy: boolean = false) {
   const txns = this.config.txns[docRes['<name>']]
   const txnObjs = {} as any
 
@@ -88,7 +95,7 @@ export async function getTxns (this: AlgoCLI, docRes: any) {
       execSync(txn.teal.compileCmd)
     }
 
-    txn = await this.transformConfigTxn(txn)
+    txn = await this.transformConfigTxn(txn, deploy)
 
     // @ts-ignore
     txnObjs[txn.name] = await this[`get${txn.type}Txn`](txn)
