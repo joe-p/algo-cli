@@ -40,7 +40,7 @@ export async function deployServer (this: AlgoCLI, txns: algosdk.Transaction[]) 
     process.exit(0)
   })
 
-  app.listen(3000, () => {
-    console.log(`Go to http://localhost:3000 to sign and submit to ${this.config.deploy.server}`)
+  app.listen(3007, () => {
+    console.log(`Go to http://localhost:3007 to sign and submit to ${this.config.deploy.server}`)
   })
 }

@@ -74,9 +74,9 @@ export async function logTxn (this: AlgoCLI, txn: any, txnID: string, offset: nu
     this.writeOutput('- ' + logs.join('\n    - '), 4 + offset)
     this.writeOutput('Global Delta:', 2 + offset)
     this.writeOutput(JSON.stringify(this.getReadableGlobalState(txn['global-state-delta'] as Array<GlobalStateDelta>), null, 2), 4 + offset)
-    this.writeOutput('Local Deltas:', 2 + offset)
+    this.writeOutput('Local Deltas:', 2 + offset);
 
-    txn['local-state-delta'].forEach(async (state: any) => {
+    (txn['local-state-delta'] || []).forEach(async (state: any) => {
       this.writeOutput(`${await this.getAddress(state.address)}:`, 4 + offset)
       this.writeOutput(JSON.stringify(this.getReadableGlobalState(state.delta as Array<GlobalStateDelta>), null, 2), 6 + offset)
     })

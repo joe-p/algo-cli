@@ -26,8 +26,16 @@ export function transformAccountField (this: AlgoCLI, accountString: string, dat
   return account
 }
 
+export function readData (this: AlgoCLI) {
+  try {
+    return JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
+  } catch (e) {
+    return {}
+  }
+}
+
 export async function transformConfigTxn (this: AlgoCLI, txn: any, deploy: boolean = false) {
-  const data = JSON.parse(fs.readFileSync('./.algo.data.json', 'utf-8'))
+  const data = this.readData()
 
   let accounts: algosdk.Account[] = []
 

@@ -61,6 +61,7 @@ export class AlgoCLI {
   public transformConfigTxn = inputMethods.transformConfigTxn
   public getTxns = inputMethods.getTxns
   public compileProgram = inputMethods.compileProgram
+  public readData = inputMethods.readData
 
   public updateData = outputMethods.updateData
   public logASA = outputMethods.logASA
