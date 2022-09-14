@@ -3,6 +3,11 @@ const server = "http://localhost"
 const token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 module.exports = {
+  deploy: {
+    server: 'http://node.testnet.algoexplorerapi.io/',
+    token: '',
+    port: 80
+  },
   algod: {
     server,
     token,
@@ -17,7 +22,8 @@ module.exports = {
   },
   accounts: {
     alice: {
-      initialBalance: 10_000_000
+      initialBalance: 10_000_000,
+      deploy: '5GDINVI7PQTTEO7NQTBZPY6T6FJENXAIE576PTTTN7MXXYTLTWBDBZ3FUM'
     },
     bob: {
       initialBalance: 10_000_000
@@ -49,7 +55,7 @@ module.exports = {
         // accounts: [ 1 ], // the 2nd account in kmd
         // apps: [ 'anotherApp' ], // get anotherApp ID from .algo.data.json
         // assets: [ 1337 ],
-        // note: "this is a txn note",
+        note: "this iss a txn note",
         // extraPages: 0,
         // lease: undefined,
         // rekeyTo: undefined,
