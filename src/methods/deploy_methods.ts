@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { AlgoCLI } from '../index'
 import path from 'path'
+import open from 'open'
 
 export async function deployServer (this: AlgoCLI, txns: algosdk.Transaction[]) {
   const app = express()
@@ -20,7 +21,10 @@ export async function deployServer (this: AlgoCLI, txns: algosdk.Transaction[]) 
         <title>Algo CLI Deploy</title>
     </head>
     <body>
-        <div id=b64>${JSON.stringify(b64Array)}</div>
+        <h1>Algo CLI Deploy</h1>
+        <p>Deploying transaction to ${this.config.deploy.server}</p>
+        <p>If you do not get a MyAlgo popup please refer to the console to check for errors</p>
+        <div id=b64 hidden>${JSON.stringify(b64Array)}</div>
     </body>
     <script type='module' src='public/client.js'></script>
 </html>`
@@ -41,6 +45,7 @@ export async function deployServer (this: AlgoCLI, txns: algosdk.Transaction[]) 
   })
 
   app.listen(3007, () => {
+    open('http://localhost:3007')
     console.log(`Go to http://localhost:3007 to sign and submit to ${this.config.deploy.server}`)
   })
 }
